@@ -5,11 +5,19 @@ subjects:
       name: Fields of Science and Technology
       uri: "http://www.oecd.org/science/inno/38235147.pdf"
       data-file: vocabularies/subjects_oecd_fos.yaml
-# TODO: Uncoment this if you want to have all affiliations with ROR identifiers.
-# affiliations:
-#   pid-type: aff
-#   schemes:
-#     - id: ROR
-#       name: Research Organization Registry
-#       uri: "https://ror.org/"
-#       data-file: vocabularies/affiliations_ror.yaml
+#resourcetypes:
+#  pid-type: rsrct
+#  data-file: vocabularies/resource_types.yaml
+licenses:
+  pid-type: lic
+  data-file: vocabularies/licenses.csv
+names:
+  pid-type: names
+  data-file: vocabularies/names_orcid.yaml
+affiliations:
+  pid-type: aff
+  schemes:
+    - id: ROR
+      name: Research Organization Registry
+      uri: "https://ror.org/"
+      data-file: vocabularies/affiliations_ror.yaml
