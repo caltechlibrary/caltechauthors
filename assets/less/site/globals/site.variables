@@ -1,0 +1,31 @@
+// cascading site.variables:
+// https://github.com/Semantic-Org/Semantic-UI-LESS/blob/master/themes/default/globals/site.variables
+// https://github.com/inveniosoftware/invenio-app-rdm/blob/master/invenio_app_rdm/theme/assets/semantic-ui/less/invenio_app_rdm/theme/globals/site.variables
+
+@caltechOrange: #ff6c0c;
+@caltechDarkBlue: #003b4c;
+@blue: @caltechDarkBlue;
+@orange: @caltechOrange;
+
+@primaryColor: @blue;
+@secondaryColor: @black;
+
+// unset the background specified in invenio_app_rdm/theme/globals/site.variables
+@navbarBackgroundImage: unset;
+@navbarBackgroundColor: @white;
+
+// redundantly defined here and in button.variables
+@searchButtonColor: @orange;
+
+// override invenio_app_rdm/theme/globals/site.variables
+@footerLightColor: @blue;
+
+/*-------------------
+      Base Sizes
+--------------------*/
+
+/* This is the single variable that controls them all */
+@emSize   : 16px;
+
+/* The size of page text  */
+@fontSize : 16px;

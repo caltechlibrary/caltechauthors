@@ -1,0 +1,38 @@
+{%- extends "invenio_theme/frontpage.html" %}
+
+{%- block page_header %}
+{%- include "invenio_app_rdm/header_frontpage.html" %}
+{%- endblock page_header %}
+
+{%- block page_body %}
+{%- block first_section %}
+<div class="get-started-section section-content white-bg">
+
+<h2 class="section-title">
+    This repository is a test version of CaltechAUTHORS.<br>
+    This site may go offline and contents may be deleted at any time.
+</h2>
+
+<div class="ui container three column stackable grid center aligned vertically padded relaxed">
+    <div class="rdm-goal column">
+        <a href="{{ url_for('invenio_search_ui.search', f=('resource_type:dataset')) }}" >
+            <img class="ui tiny centered image" aria-hidden="true" src="{{ url_for('invenio_app_rdm.static', filename=('images/noun-data-5088250-FF6C0C.svg')) }}">
+            <div>Data Sets</div>
+        </a>
+    </div>
+    <div class="rdm-goal column">
+        <a href="{{ url_for('invenio_search_ui.search', f=('resource_type:software')) }}" >
+            <img class="ui tiny centered image" aria-hidden="true" src="{{ url_for('invenio_app_rdm.static', filename=('images/noun-coding-4329373-FF6C0C.svg')) }}">
+            <div>Software</div>
+        </a>
+    </div>
+    <div class="rdm-goal column">
+        <a href="{{ url_for('invenio_app_rdm_records.deposit_create') }}" >
+            <img class="ui tiny centered image" aria-hidden="true" src="{{ url_for('invenio_app_rdm.static', filename=('images/noun-upload-2617435-FF6C0C.svg')) }}">
+            <div>Upload</div>
+        </a>
+    </div>
+</div>
+</div>
+{%- endblock first_section %}
+{%- endblock page_body %}

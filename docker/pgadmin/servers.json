@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "caltechauthors-db",
+      "Group": "Servers",
+      "Host": "caltechauthors-db-1",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "caltechauthors",
+      "SSLMode": "prefer"
+    }
+  }
+}
