@@ -6,8 +6,8 @@ Type=simple
 User=ubuntu
 StandardOutput=kmsg
 StandardError=kmsg
-WorkingDirectory=/Sites/caltechdata
-EnvironmentFile=/Sites/caltechdata/.env
+WorkingDirectory=/Sites/caltechauthors
+EnvironmentFile=/Sites/caltechauthors/.env
 ExecStart=/usr/local/bin/pipenv run uwsgi --logger syslog:inveniordm_rest uwsgi_rest.ini
 
 [Install]
