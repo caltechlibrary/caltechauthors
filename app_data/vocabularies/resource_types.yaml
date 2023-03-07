@@ -20,7 +20,7 @@
   props:
     csl: report
     datacite_general: Collection
-    datacite_type: ''
+    datacite_type: Annotation
     openaire_resourceType: '9'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/technicalDocumentation
@@ -28,7 +28,25 @@
     subtype: publication-annotationcollection
     type: publication
   title:
-    en: Annotation collection
+    en: Annotation Collection
+    de: Anmerkungssammlung
+  tags:
+    - depositable
+    - linkable
+- id: publication-atlas
+  icon: file alternate
+  props:
+    csl: report
+    datacite_general: Text
+    datacite_type: Atlas
+    openaire_resourceType: '9'
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/technicalDocumentation
+    schema.org: https://schema.org/Collection
+    subtype: publication-annotationcollection
+    type: publication
+  title:
+    en: Atlas
     de: Anmerkungssammlung
   tags:
     - depositable
@@ -84,7 +102,6 @@
   title:
     en: Conference or Workshop
     de: Konferenzbeitrag
-  tags:
 - id: conference-paper
   icon: file alternate
   props:
@@ -144,7 +161,7 @@
   props:
     csl: report
     datacite_general: Text
-    datacite_type: Data management plan
+    datacite_type: Data Management Plan
     openaire_resourceType: '9'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/technicalDocumentation
@@ -152,7 +169,7 @@
     subtype: publication-datamanagementplan
     type: publication
   title:
-    en: Data management plan
+    en: Data Management Plan
     de: Datenmanagementplan
   tags:
     - depositable
@@ -162,7 +179,7 @@
   props:
     csl: article-journal
     datacite_general: Text
-    datacite_type: Journal article
+    datacite_type: Journal Article
     openaire_resourceType: '1'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/article
@@ -170,7 +187,7 @@
     subtype: publication-article
     type: publication
   title:
-    en: Journal article
+    en: Journal Article
     de: Zeitschriftenartikel
   tags:
     - depositable
@@ -216,7 +233,7 @@
   props:
     csl: report
     datacite_general: Text
-    datacite_type: Project deliverable
+    datacite_type: Project Report
     openaire_resourceType: '34'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/report
@@ -252,7 +269,7 @@
   props:
     csl: article
     datacite_general: Text
-    datacite_type: Software documentation
+    datacite_type: Software Documentation
     openaire_resourceType: '9'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/technicalDocumentation
@@ -260,7 +277,7 @@
     subtype: publication-softwaredocumentation
     type: publication
   title:
-    en: Software documentation
+    en: Software Documentation
     de: Softwaredokumentation
   tags:
     - depositable
@@ -306,7 +323,7 @@
   props:
     csl: article
     datacite_general: Text
-    datacite_type: Working paper
+    datacite_type: Working Paper
     openaire_resourceType: '14'
     openaire_type: publication
     eurepo: info:eu-repo/semantics/workingPaper
@@ -314,7 +331,7 @@
     subtype: publication-workingpaper
     type: publication
   title:
-    en: Working paper
+    en: Working Paper
     de: Arbeitspapier
   tags:
     - depositable
@@ -611,8 +628,8 @@
   icon: graduation
   props:
     csl: speech
-    datacite_general: InteractiveResource
-    datacite_type: ''
+    datacite_general: Text
+    datacite_type: Lecture Notes
     openaire_resourceType: '10'
     openaire_type: other
     eurepo: info:eu-repo/semantics/lecture
@@ -621,6 +638,24 @@
     type: teachingresource
   title:
     en: Lecture Notes
+    de: Unterrichtseinheit
+  tags:
+    - depositable
+    - linkable
+- id: teachingresource-textbook
+  icon: graduation
+  props:
+    csl: speech
+    datacite_general: Text
+    datacite_type: Textbook
+    openaire_resourceType: '10'
+    openaire_type: other
+    eurepo: info:eu-repo/semantics/lecture
+    schema.org: https://schema.org/CreativeWork
+    subtype: teachingresource-lecturenotes
+    type: teachingresource
+  title:
+    en: Textbook
     de: Unterrichtseinheit
   tags:
     - depositable

@@ -4,6 +4,10 @@
 - active: true
   email: tmorrell@caltech.edu
   confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
 - active: true
   email: rsdoiel@caltech.edu
   confirmed: true
