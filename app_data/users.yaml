@@ -11,12 +11,28 @@
 - active: true
   email: rsdoiel@caltech.edu
   confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
 - active: true
   email: kjohnson@caltech.edu
   confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
 - active: true
   email: gsporter@caltech.edu
   confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
 - active: true
   email: tonyd@caltech.edu
   confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
