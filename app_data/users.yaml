@@ -4,25 +4,15 @@
 - active: true
   email: tmorrell@caltech.edu
   confirmed: true
-  roles: 
-    - admin
 - active: true
   email: rsdoiel@caltech.edu
   confirmed: true
-  roles: 
-    - admin
 - active: true
   email: kjohnson@caltech.edu
   confirmed: true
-  roles: 
-    - admin
 - active: true
   email: gsporter@caltech.edu
   confirmed: true
-  roles: 
-    - admin
 - active: true
   email: tonyd@caltech.edu
   confirmed: true
-  roles: 
-    - admin
