@@ -134,5 +134,5 @@ export const CommunityHeader = connect(
 )(CommunityHeaderComponent);
 
 export const overriddenComponents =
-    {"InvenioAppRdm.Deposit.CommunityHeader.layout":ComunityHeader,
+    {"InvenioAppRdm.Deposit.CommunityHeader.layout":CommunityHeader,
     };
