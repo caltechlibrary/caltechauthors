@@ -18,7 +18,9 @@
   {%- if record %}
   <input id="deposits-record" type="hidden" name="deposits-record" value='{{record | tojson }}'></input>
   {%- endif %}
-  <input id="deposits-draft-community" type="hidden" name="deposits-draft-community" value="{preselectedCommunity:'5ab46cf6-8210-4ade-89ca-1e06d82a0de6'}"></input>
+  <input id="deposits-draft-community" type="hidden"
+  name="deposits-draft-community"
+        value='{"preselectedCommunity":"5ab46cf6-8210-4ade-89ca-1e06d82a0de6"}'></input>
   {%- if files %}
   <input id="deposits-record-files" type="hidden" name="deposits-record-files" value='{{files | tojson }}'></input>
   {%- endif %}
