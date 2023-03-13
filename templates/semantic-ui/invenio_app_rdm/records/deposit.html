@@ -20,7 +20,7 @@
   {%- endif %}
   <input id="deposits-draft-community" type="hidden"
   name="deposits-draft-community"
-  value='{"preselectedCommunity":{"community":{"access": {
+  value='{"access": {
       "visibility": "public"
     },
     "id": "5ab46cf6-8210-4ade-89ca-1e06d82a0de6",
@@ -30,7 +30,7 @@
     "metadata": {
       "title": "CaltechAUTHORS"
     },
-    "slug": "caltechauthors"}}}'></input>
+    "slug": "caltechauthors"}'></input>
   {%- if files %}
   <input id="deposits-record-files" type="hidden" name="deposits-record-files" value='{{files | tojson }}'></input>
   {%- endif %}
