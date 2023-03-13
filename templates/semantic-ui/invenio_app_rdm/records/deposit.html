@@ -20,7 +20,17 @@
   {%- endif %}
   <input id="deposits-draft-community" type="hidden"
   name="deposits-draft-community"
-        value='{"preselectedCommunity":"5ab46cf6-8210-4ade-89ca-1e06d82a0de6"}'></input>
+  value='{"preselectedCommunity":{"access": {
+      "visibility": "public"
+    },
+    "id": "5ab46cf6-8210-4ade-89ca-1e06d82a0de6",
+    "links": {
+      "logo": "https://authors.caltechlibrary.dev/api/communities/5ab46cf6-8210-4ade-89ca-1e06d82a0de6/logo"
+    },
+    "metadata": {
+      "title": "CaltechAUTHORS"
+    },
+    "slug": "caltechauthors"}}'></input>
   {%- if files %}
   <input id="deposits-record-files" type="hidden" name="deposits-record-files" value='{{files | tojson }}'></input>
   {%- endif %}
