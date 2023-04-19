@@ -23,14 +23,15 @@
   value='{"access": {
       "visibility": "public"
     },
-    "id": "5ab46cf6-8210-4ade-89ca-1e06d82a0de6",
+    "id": "c35b2e22-24c8-407b-ad18-af0e7d6c8d52",
     "links": {
-      "logo": "https://authors.caltechlibrary.dev/api/communities/5ab46cf6-8210-4ade-89ca-1e06d82a0de6/logo"
+      "logo": "https://authors.caltechlibrary.dev/api/communities/c35b2e22-24c8-407b-ad18-af0e7d6c8d52/logo"
     },
     "metadata": {
       "title": "CaltechAUTHORS"
     },
-    "slug": "caltechauthors"}'></input>
+    "slug": "caltechauthors",
+    "ui":{"permissions":{"can_include_directly": false}}}'></input>
   {%- if files %}
   <input id="deposits-record-files" type="hidden" name="deposits-record-files" value='{{files | tojson }}'></input>
   {%- endif %}
