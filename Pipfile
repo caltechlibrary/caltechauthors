@@ -7,12 +7,13 @@ verify_ssl = true
 check-manifest = ">=0.25"
 
 [packages]
-invenio-app-rdm = {extras = ["postgresql", "opensearch2", "s3"], version = "~=11.0.0"}
 caltechauthors = {editable="True", path="./site"}
 uwsgi = ">=2.0"
 uwsgitop = ">=0.11"
 uwsgi-tools = ">=1.1.1"
 python-dotenv = "*"
+invenio-i18n = "==2.0.0"
+invenio-app-rdm = {version = "~=12.0.0b1", extras = ["opensearch2", "postgresql"]}
 
 [requires]
 python_version = "3.9"
