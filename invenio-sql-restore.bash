@@ -50,7 +50,7 @@ function restore_postgres_from() {
 	fi
 	$DOCKER container exec -it "${CONTAINER}" /usr/bin/psql -U "${DB_USERNAME}" --dbname postgres -c "DROP DATABASE IF EXISTS ${DB_NAME}"
 	$DOCKER container exec -it "${CONTAINER}" /usr/bin/psql -U "${DB_USERNAME}" --dbname postgres -c "CREATE DATABASE ${DB_NAME}"
-	$DOCKER container exec /usr/bin/createdb -U "${DB_USERNAME}" caltechdata
+	$DOCKER container exec /usr/bin/createdb -U "${DB_USERNAME}" "${DB_NAME}"
  	cat "${BACKUP_FILE}" | $DOCKER container exec \
  		-i "${CONTAINER}" /usr/bin/psql \
  		--username="${DB_USERNAME}" \
