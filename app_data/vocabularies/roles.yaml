@@ -214,3 +214,9 @@
   title:
     en: Panelist
     de: Andere
+- id: patentassignee
+  props:
+    datacite: Other
+  title:
+    en: Patent Assignee
+    de: Andere
