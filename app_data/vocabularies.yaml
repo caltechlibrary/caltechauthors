@@ -30,3 +30,6 @@ creatorsroles:
 contributorsroles:
   pid-type: cor
   data-file: vocabularies/roles.yaml
+descriptiontypes:
+  pid-type: dty
+  data-file: vocabularies/description_types.yaml

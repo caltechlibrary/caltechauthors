@@ -7,4 +7,3 @@ names:
     - type: service
       args:
         service_or_name: names
-        identity: system_identity
