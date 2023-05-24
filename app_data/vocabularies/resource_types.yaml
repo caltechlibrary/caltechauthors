@@ -18,7 +18,7 @@
 - id: publication-annotationcollection
   icon: file alternate
   props:
-    csl: report
+    csl: collection
     datacite_general: Collection
     datacite_type: Annotation
     openaire_resourceType: '9'
@@ -36,7 +36,7 @@
 - id: publication-atlas
   icon: file alternate
   props:
-    csl: report
+    csl: collection
     datacite_general: Text
     datacite_type: Atlas
     openaire_resourceType: '9'
@@ -249,7 +249,7 @@
 - id: publication-report
   icon: file alternate
   props:
-    csl: article
+    csl: report
     datacite_general: Text
     datacite_type: Report
     openaire_resourceType: '17'
@@ -304,7 +304,7 @@
   icon: file alternate
   props:
     csl: thesis
-    datacite_general: Text
+    datacite_general: Dissertation
     datacite_type: Thesis
     openaire_resourceType: '6'
     openaire_type: publication
@@ -321,7 +321,7 @@
 - id: publication-workingpaper
   icon: file alternate
   props:
-    csl: article
+    csl: report
     datacite_general: Text
     datacite_type: Working Paper
     openaire_resourceType: '14'
@@ -357,7 +357,7 @@
 - id: publication-documentation
   icon: file alternate
   props:
-    csl: article
+    csl: document
     datacite_general: Text
     datacite_type: Documentation
     openaire_resourceType: '20'
@@ -375,7 +375,7 @@
 - id: publication-issue
   icon: file alternate
   props:
-    csl: article
+    csl: collection
     datacite_general: Text
     datacite_type: Journal Issue
     openaire_resourceType: '20'
@@ -393,7 +393,7 @@
 - id: publication-newspaperissue
   icon: file alternate
   props:
-    csl: article
+    csl: collection
     datacite_general: Text
     datacite_type: Newspaper Issue
     openaire_resourceType: '20'
@@ -429,7 +429,7 @@
 - id: publication-oralhistory
   icon: file alternate
   props:
-    csl: article
+    csl: speech
     datacite_general: Text
     datacite_type: Oral History
     openaire_resourceType: '20'
@@ -447,7 +447,7 @@
 - id: publication-map
   icon: file alternate
   props:
-    csl: article
+    csl: map
     datacite_general: Text
     datacite_type: Map
     openaire_resourceType: '20'
@@ -465,7 +465,7 @@
 - id: publication-whitepaper
   icon: file alternate
   props:
-    csl: article
+    csl: report
     datacite_general: Text
     datacite_type: White Paper
     openaire_resourceType: '20'
@@ -483,7 +483,7 @@
 - id: labnotebook
   icon: file alternate
   props:
-    csl: article
+    csl: document
     datacite_general: Text
     datacite_type: Lab Notebook
     openaire_resourceType: '20'
@@ -555,7 +555,7 @@
 - id: image-map
   icon: chart bar outline
   props:
-    csl: figure
+    csl: map
     datacite_general: Image
     datacite_type: Map
     openaire_resourceType: '25'
@@ -591,7 +591,7 @@
 - id: software
   icon: code
   props:
-    csl: article
+    csl: software
     datacite_general: Software
     datacite_type: ''
     openaire_resourceType: '29'
@@ -627,7 +627,7 @@
 - id: teachingresource-lecturenotes
   icon: graduation
   props:
-    csl: speech
+    csl: document
     datacite_general: Text
     datacite_type: Lecture Notes
     openaire_resourceType: '10'
@@ -645,7 +645,7 @@
 - id: teachingresource-textbook
   icon: graduation
   props:
-    csl: speech
+    csl: book
     datacite_general: Text
     datacite_type: Textbook
     openaire_resourceType: '10'
