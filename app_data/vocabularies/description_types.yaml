@@ -46,3 +46,45 @@
   title:
     en: Additional Information
     de: Sonstige
+- id: additional
+  props:
+    datacite: Other
+  title:
+    en: Additional Information
+    de: Sonstige
+- id: acknowledgement
+  props:
+    datacite: Other
+  title:
+    en: Acknowledgement
+    de: Sonstige
+- id: coi
+  props:
+    datacite: Other
+  title:
+    en: Conflict of Interest
+    de: Sonstige
+- id: copyright
+  props:
+    datacite: Other
+  title:
+    en: Copyright and License
+    de: Sonstige
+- id: data-availability
+  props:
+    datacite: Other
+  title:
+    en: Code/Data Availability
+    de: Sonstige
+- id: errata
+  props:
+    datacite: Other
+  title:
+    en: Errata
+    de: Sonstige
+- id: funding
+  props:
+    datacite: Other
+  title:
+    en: Funding
+    de: Sonstige
