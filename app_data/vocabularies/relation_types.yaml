@@ -190,3 +190,21 @@
   title:
      en: Obsoletes
      de: Ersetzt
+- id: hasmetadata
+  props:
+     datacite: HasMetadata
+  title:
+    en: Has metadata
+    de: Hat metadaten
+- id: ismetadatafor
+  props:
+     datacite: IsMetadataFor
+  title:
+    en: Is metadata for
+    de: Sind metadaten für
+- id: ispublishedin
+  props:
+     datacite: IsPublishedIn
+  title:
+     en: Is published in
+     de: Wird veröffentlicht in
