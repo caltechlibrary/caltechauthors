@@ -3,6 +3,7 @@
   confirmed: true
 - active: true
   email: tmorrell@caltech.edu
+  username: tmorrell
   confirmed: true
   roles:
     - admin
@@ -11,12 +12,14 @@
 - active: true
   email: rsdoiel@caltech.edu
   confirmed: true
+  username: rsdoiel
   roles:
     - admin
   allow:
     - superuser-access
 - active: true
   email: kjohnson@caltech.edu
+  username: kjohnson
   confirmed: true
   roles:
     - admin
@@ -24,6 +27,7 @@
     - superuser-access
 - active: true
   email: gsporter@caltech.edu
+  username: gsporter
   confirmed: true
   roles:
     - admin
@@ -31,6 +35,55 @@
     - superuser-access
 - active: true
   email: tonyd@caltech.edu
+  username: tonyd
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: sdavison@caltech.edu
+  username: sdavison
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: tkeswick@caltech.edu
+  username: tkeswick
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: joy@caltech.edu
+  username: joy
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: dtwrub@caltech.edu
+  username: dtwrub
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: briney@caltech.edu
+  username: briney
+  confirmed: true
+  roles:
+    - admin
+  allow:
+    - superuser-access
+- active: true
+  email: kwhatley@caltech.edu
+  username: kwhatley
   confirmed: true
   roles:
     - admin
