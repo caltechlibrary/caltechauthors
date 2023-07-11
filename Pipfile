@@ -13,7 +13,7 @@ uwsgitop = ">=0.11"
 uwsgi-tools = ">=1.1.1"
 python-dotenv = "*"
 invenio-i18n = "==2.0.0"
-invenio-app-rdm = {version = "~=12.0.0b1", extras = ["opensearch2", "postgresql"]}
+invenio-app-rdm = {version = "~=12.0.0b2.dev8", extras = ["opensearch2", "postgresql"]}
 
 [requires]
 python_version = "3.9"
