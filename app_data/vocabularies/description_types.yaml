@@ -74,7 +74,7 @@
   props:
     datacite: Other
   title:
-    en: Code/Data Availability
+    en: Data Availability
     de: Sonstige
 - id: errata
   props:
@@ -87,4 +87,16 @@
     datacite: Other
   title:
     en: Funding
+    de: Sonstige
+- id: contributions
+  props:
+    datacite: Other
+  title:
+    en: Contributions
+    de: Sonstige
+- id: code-availability
+  props:
+    datacite: Other
+  title:
+    en: Code Availability
     de: Sonstige
