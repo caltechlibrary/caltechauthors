@@ -100,3 +100,15 @@
   title:
     en: Code Availability
     de: Sonstige
+- id: facilities
+  props:
+    datacite: Other
+  title:
+    en: Facilities
+    de: Sonstige
+- id: software-references
+  props:
+    datacite: Other
+  title:
+    en: Software References
+    de: Sonstige
