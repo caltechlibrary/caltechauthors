@@ -112,3 +112,9 @@
   title:
     en: Software References
     de: Sonstige
+- id: ethics
+  props:
+    datacite: Other
+  title:
+    en: Ethics
+    de: Sonstige
