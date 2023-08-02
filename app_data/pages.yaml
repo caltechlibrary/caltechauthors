@@ -1,0 +1,5 @@
+# list of pages:
+- url: /year
+  title: Browse by year
+  description: CaltechAUTHORS content by year
+  template: year.html
