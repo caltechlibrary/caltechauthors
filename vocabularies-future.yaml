@@ -7,3 +7,12 @@ names:
     - type: service
       args:
         service_or_name: names
+awards:
+  readers:
+    - type: jsonl
+      args:
+        origin: "./app_data/awards.jsonl"
+  writers:
+    - type: awards-service
+      args:
+        service_or_name: awards      
