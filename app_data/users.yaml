@@ -4,6 +4,7 @@
 - active: true
   email: tmorrell@caltech.edu
   username: tmorrell
+  full_name: Morrell, Thomas
   confirmed: true
   roles:
     - admin
@@ -13,6 +14,7 @@
   email: rsdoiel@caltech.edu
   confirmed: true
   username: rsdoiel
+  full_name: Doiel, Robert
   roles:
     - admin
   allow:
@@ -20,6 +22,7 @@
 - active: true
   email: kjohnson@caltech.edu
   username: kjohnson
+  full_name: Johnson, Kathy
   confirmed: true
   roles:
     - admin
@@ -28,6 +31,7 @@
 - active: true
   email: gsporter@caltech.edu
   username: gsporter
+  full_name: Porter, George
   confirmed: true
   roles:
     - admin
@@ -36,56 +40,40 @@
 - active: true
   email: tonyd@caltech.edu
   username: tonyd
+  full_name: Diaz, Tony
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: sdavison@caltech.edu
   username: sdavison
+  full_name: Davison, Stephen
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: tkeswick@caltech.edu
   username: tkeswick
+  full_name: Keswick, Tommy
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: joy@caltech.edu
   username: joy
+  full_name: Painter, Joy
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: dtwrub@caltech.edu
   username: dtwrub
+  full_name: Wrublewski, Donna
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: briney@caltech.edu
   username: briney
+  full_name: Briney, Kristin
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
 - active: true
   email: kwhatley@caltech.edu
   username: kwhatley
+  full_name: Whatley, Kara
   confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
+- active: true
+  email: dld-dev@library.caltech.edu
+  username: automation
+  full_name: Automation
+  confirmed: true
