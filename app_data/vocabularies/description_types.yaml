@@ -118,3 +118,9 @@
   title:
     en: Ethics
     de: Sonstige
+- id: attached-files
+  props:
+    datacite: Other
+  title:
+    en: Attached Files
+    de: Sonstige
