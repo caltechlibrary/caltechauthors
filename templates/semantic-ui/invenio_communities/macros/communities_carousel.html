@@ -5,10 +5,13 @@
 
   Invenio is free software; you can redistribute it and/or modify it
   under the terms of the MIT License; see LICENSE file for more details.
+
+  NOTE: Updating this template alone doesn't cusomize the carousel structure, since it gets
+  refreshed by the javascript
 #}
 
 {% macro communities_carousel(
-    title=_("Featured communities"),
+    title=_(" "),
     fetch_url="/api/communities/featured",
     interval_delay="10000",
     animation_speed="300",
