@@ -14,6 +14,12 @@
 {"id": "Caltech-Center-for-Environmental-Microbial-Interactions-(CEMI)", "title": {"en": "Caltech Center for Environmental Microbial Interactions (CEMI)"}}
 {"id": "Caltech-Library", "title": {"en": "Caltech Library"}}
 {"id": "Caltech-Tectonics-Observatory", "title": {"en": "Caltech Tectonics Observatory"}}
+{"id": "Caltech-Tectonics-Observatory.-Indo-Asian-Collision-Zone", "title": {"en": "Caltech Tectonics Observatory. Indo-Asian Collision Zone"}}
+{"id": "Caltech-Tectonics-Observatory.-MesoAmerican-Subduction-Experiment-(MASE)", "title": {"en": "Caltech Tectonics Observatory. MesoAmerican Subduction Experiment (MASE)"}}
+{"id": "Caltech-Tectonics-Observatory.-Sumatran-Plate-Boundary", "title": {"en": "Caltech Tectonics Observatory. Sumatran Plate Boundary"}}
+{"id": "Caltech-Tectonics-Observatory.-Taiwan-Tectonics-and-Seismicity", "title": {"en": "Caltech Tectonics Observatory. Taiwan Tectonics and Seismicity"}}
+{"id": "Caltech-Theory", "title": {"en": "Caltech Theory"}}
+{"id": "Center-for-Advanced-Computing-Research", "title": {"en": "Center for Advanced Computing Research"}}
 {"id": "Center-for-Geomechanics-and-Mitigation-of-Geohazards-(GMG)", "title": {"en": "Center for Geomechanics and Mitigation of Geohazards (GMG)"}}
 {"id": "Center-for-Research-on-the-Prevention-of-Natural-Disasters", "title": {"en": "Center for Research on the Prevention of Natural Disasters"}}
 {"id": "Center-for-Theoretical-and-Experimental-Social-Sciences", "title": {"en": "Center for Theoretical and Experimental Social Sciences"}}
@@ -21,6 +27,7 @@
 {"id": "Earthquake-Engineering-Research-Laboratory", "title": {"en": "Earthquake Engineering Research Laboratory"}}
 {"id": "Electron-Tube-and-Microwave-Laboratory", "title": {"en": "Electron Tube and Microwave Laboratory"}}
 {"id": "Environmental-Quality-Laboratory", "title": {"en": "Environmental Quality Laboratory"}}
+{"id": "Explosion-Dynamics-Laboratory", "title": {"en": "Explosion Dynamics Laboratory"}}
 {"id": "GALCIT", "title": {"en": "GALCIT"}}
 {"id": "Graduate-Aeronautical-Laboratories-(Fluid-Mechanics)", "title": {"en": "Graduate Aeronautical Laboratories (Fluid Mechanics)"}}
 {"id": "Graduate-Aeronautical-Laboratories-(Solid-Mechanics)", "title": {"en": "Graduate Aeronautical Laboratories (Solid Mechanics)"}}
@@ -31,9 +38,12 @@
 {"id": "Infrared-Processing-and-Analysis-Center-(IPAC)", "title": {"en": "Infrared Processing and Analysis Center (IPAC)"}}
 {"id": "IQIM", "title": {"en": "Institute for Quantum Information and Matter"}}
 {"id": "JCAP", "title": {"en": "JCAP"}}
+{"id": "Jim-Hall-Design-and-Prototyping-Lab", "title": {"en": "Jim Hall Design and Prototyping Lab"}}
 {"id": "Kavli-Nanoscience-Institute", "title": {"en": "Kavli Nanoscience Institute"}}
 {"id": "Keck-Institute-for-Space-Studies", "title": {"en": "Keck Institute for Space Studies"}}
-{"id": "Koch-Laboratory", "title": {"en": "Koch Laboratory"}}
+{"id": "Kellogg-Radiation-Laboratory", "title": {"en": "Kellogg Radiation Laboratory"}}
+{"id": "Koch-Laboratory", "title": {"en": "Koch Laboratory (KLAB)"}}
+{"id": "LIGO", "title": {"en": "LIGO"}}
 {"id": "Lunatic-Asylum", "title": {"en": "Lunatic Asylum"}}
 {"id": "Millard-and-Muriel-Jacobs-Genetics-and-Genomics-Laboratory", "title": {"en": "Millard and Muriel Jacobs Genetics and Genomics Laboratory"}}
 {"id": "Moore-Center-for-Theoretical-Cosmology-and-Physics", "title": {"en": "Moore Center for Theoretical Cosmology and Physics"}}
@@ -44,6 +54,7 @@
 {"id": "Palomar-Observatory", "title": {"en": "Palomar Observatory"}}
 {"id": "Palomar-Transient-Factory", "title": {"en": "Palomar Transient Factory"}}
 {"id": "Parallel-and-Distributed-Systems-Group", "title": {"en": "Parallel and Distributed Systems Group"}}
+{"id": "Plasma-Laboratory", "title": {"en": "Plasma Laboratory"}}
 {"id": "Resnick-Sustainability-Institute", "title": {"en": "Resnick Sustainability Institute"}}
 {"id": "Rosen-Bioengineering-Center", "title": {"en": "Rosen Bioengineering Center"}}
 {"id": "SPLASH", "title": {"en": "SPLASH"}}
@@ -70,3 +81,11 @@
 {"id": "Guggenheim-Jet-Propulsion-Center", "title": {"en": "Guggenheim Jet Propulsion Center"}}
 {"id": "Jacobs-Institute-for-Molecular-Engineering-for-Medicine", "title": {"en": "Jacobs Institute for Molecular Engineering for Medicine"}}
 {"id": "Liquid-Sunlight-Alliance", "title": {"en": "Liquid Sunlight Alliance"}}
+{"id": "Computer-Science-Technical-Reports", "title": {"en": "Computer Science Technical Reports"}}
+{"id": "Control-and-Dynamical-Systems-Technical-Reports", "title": {"en": "Control and Dynamical Systems Technical Reports"}}
+{"id": "Humanities-Working-Papers", "title": {"en": "Humanities Working Papers"}}
+{"id": "Munger-Africana-Library-Notes", "title": {"en": "Munger Africana Library Notes"}}
+{"id": "Social-Science-Working-Papers", "title": {"en": "Social Science Working Papers"}}
+{"id": "Caltech-Civil-Engineering-Report", "title": {"en": "Caltech Civil Engineering Report"}}
+{"id": "Caltech-CMS-Lecture-Notes", "title": {"en": "Caltech CMS Lecture Notes"}}
+{"id": "Computation-&-Neural-Systems-Technical-Reports", "title": {"en": "Computation & Neural Systems Technical Reports"}}
