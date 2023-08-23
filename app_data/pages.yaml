@@ -15,3 +15,7 @@
   title: Browse by year
   description: CaltechAUTHORS content by year
   template: year.html
+- url: /metadata_searching
+  title: Metadata field searches
+  description: Examples searches of CaltechAUTHORS metadata
+  template: metadata_searching.html

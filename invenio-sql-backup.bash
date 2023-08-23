@@ -28,11 +28,11 @@ used as the prefix to the backup up filename.
 
 # EXAMPLES
 
-Backup the Postgres running in 'caltechdata_db_1' and write them
+Backup the Postgres running in 'caltechauthors_db_1' and write them
 to '/var/backups/postgres'.
 
 ~~~shell
-     ${APP_NAME} caltechdata_db_1 /var/backups/postgres
+     ${APP_NAME} caltechauthors_db_1 /var/backups/postgres
 ~~~
 
 EOT
