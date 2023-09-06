@@ -15,6 +15,7 @@ python-dotenv = "*"
 invenio-i18n = "==2.0.0"
 invenio-app-rdm = {version = "~=12.0.0b2.dev8", extras = ["opensearch2", "postgresql"]}
 invenio-saml = "*"
+sentry-sdk = {extras = ["flask"], version = "*"}
 
 [requires]
 python_version = "3.9"
