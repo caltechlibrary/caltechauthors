@@ -9,7 +9,7 @@ args = parser.parse_args()
 # Get access token as environment variable
 token = os.environ["RDMTOK"]
 
-url = "https://data.caltech.edu/api/records"
+url = "https://authors.library.caltech.edu/api/records"
 
 headers = {
     "Authorization": "Bearer %s" % token,
