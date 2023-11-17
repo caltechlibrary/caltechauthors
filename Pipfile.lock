@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2dfd9a2483d0e5b1fa2e39506dbbc0fa867b4fb4be3b69ffe555797b7f375ebe"
+            "sha256": "11f89b09073eb053d04020c147e0a01c1bbb3ec9d9d94c4a7d9164c1a06e33d0"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -209,11 +209,12 @@
         },
         "certifi": {
             "hashes": [
-                "sha256:0f0d56dc5a6ad56fd4ba36484d6cc34451e1c6548c61daad8c320169f91eddc7",
-                "sha256:c6c2e98f5c7869efca1f8916fed228dd91539f9f1b444c314c06eef02980c716"
+                "sha256:539cc1d13202e33ca466e88b2807e29f4c13049d6d87031a3c110744495cb082",
+                "sha256:92d6037539857d8206b8f6ae472e8b77db8058fec5937a1ef3f54304089edbb9"
             ],
+            "index": "pypi",
             "markers": "python_version >= '3.6'",
-            "version": "==2023.07.22"
+            "version": "==2023.7.22"
         },
         "cffi": {
             "hashes": [
@@ -2761,7 +2762,7 @@
         },
         "uwsgi": {
             "hashes": [
-                "sha256:35a30d83791329429bc04fe44183ce4ab512fcf6968070a7bfba42fc5a0552a9"
+                "sha256:4cc4727258671ac5fa17ab422155e9aaef8a2008ebb86e4404b66deaae965db2"
             ],
             "index": "pypi",
             "version": "==2.0.22"
