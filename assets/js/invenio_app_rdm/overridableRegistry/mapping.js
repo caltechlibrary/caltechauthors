@@ -5,6 +5,7 @@
 // under the terms of the MIT License; see LICENSE file for more details.
 
 import React, { Component } from "react";
+import { List } from "semantic-ui-react";
 import PropTypes from "prop-types";
 
 import { FieldLabel, TextField } from "react-invenio-forms";
@@ -40,4 +41,11 @@ PublisherField.defaultProps = {
   placeholder: i18next.t("Publisher"),
 };
 
-export const overriddenComponents = {"InvenioAppRdm.Deposit.PublisherField.container":PublisherField,}; 
+const SearchHelpLinks = () => {
+  return (
+    <List> <List.Item> <a href="https://caltechlibrary.github.io/irdm-queue-portal/">{i18next.t("Queue View")}</a> </List.Item> </List>
+  )
+}
+
+
+export const overriddenComponents = {"InvenioAppRdm.Deposit.PublisherField.container":PublisherField,"InvenioCommunities.RequestSearch.SearchHelpLinks":SearchHelpLinks }; 
