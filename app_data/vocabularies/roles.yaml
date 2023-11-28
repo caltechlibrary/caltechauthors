@@ -220,3 +220,15 @@
   title:
     en: Patent Assignee
     de: Andere
+- id: inventor
+  props:
+    datacite: Other
+  title:
+    en: Inventor
+    de: Andere
+- id: corresponding
+  props:
+    datacite: Other
+  title:
+    en: Corresponding
+    de: Andere
