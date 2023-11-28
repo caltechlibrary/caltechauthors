@@ -39,3 +39,6 @@ caltechgroups:
 caltechjournals:
   pid-type: ctjrnl
   data-file: vocabularies/caltech_journals.jsonl
+publicationstatus:
+  pid-type: pubsat
+  data-file: vocabularies/publication_status.jsonl
