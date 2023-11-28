@@ -1,0 +1,15 @@
+{"id": "published", "title": {"en": "Published"}}
+{"id": "in-press", "title": {"en": "In Press"}}
+{"id": "accepted", "title": {"en": "Accepted"}}
+{"id": "submitted", "title": {"en": "Submitted"}}
+{"id": "draft", "title": {"en": "Draft"}}
+{"id": "unpublished", "title": {"en": "Unpublished"}}
+{"id": "updated", "title": {"en": "Updated"}}
+{"id": "reprint", "title": {"en": "Reprint"}}
+{"id": "supplemental-material", "title": {"en": "Supplemental Material"}}
+{"id": "erratum", "title": {"en": "Erratum"}}
+{"id": "discussion", "title": {"en": "Discussion"}}
+{"id": "cover-image", "title": {"en": "Cover Image"}}
+{"id": "copyright-permissions", "title": {"en": "Copyright Permissions"}}
+{"id": "release-permissions", "title": {"en": "Release Permissions"}}
+{"id": "oa-waiver", "title": {"en": "OA Waiver"}}
