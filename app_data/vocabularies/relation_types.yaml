@@ -208,3 +208,15 @@
   title:
      en: Is published in
      de: Wird veröffentlicht in
+- id: iscorrectedby
+  props:
+     datacite: HasVersion
+  title:
+     en: Is corrected by
+     de: Wird veröffentlicht in
+- id: iscorrectionof
+  props:
+     datacite: IsNewVersionOf
+  title:
+     en: Is correction of
+     de: Wird veröffentlicht in
