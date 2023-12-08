@@ -776,3 +776,21 @@
   tags:
     - depositable
     - linkable
+- id: publication-supplemental
+  icon: file alternate
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: publication-supplemental
+    type: publication
+  title:
+    en: Supplemental Material
+    de: Zeitschriftenartikel
+  tags:
+    - depositable
+    - linkable
