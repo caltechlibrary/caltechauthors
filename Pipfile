@@ -17,7 +17,7 @@ invenio-app-rdm = {version = "~=12.0.0b2.dev8", extras = ["opensearch2", "postgr
 invenio-saml = "*"
 sentry-sdk = "*"
 invenio-s3 = "*"
-invenio-assets = ">=v3.0.1"
+invenio-assets = "==v3.0.2"
 
 [requires]
 python_version = "3.9"
