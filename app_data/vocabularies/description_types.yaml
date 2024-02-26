@@ -136,3 +136,9 @@
   title:
     en: Patent History
     de: Sonstige
+- id: featured-in
+  props:
+    datacite: Other
+  title:
+    en: Featured In
+    de: Sonstige
