@@ -794,3 +794,103 @@
   tags:
     - depositable
     - linkable
+- id: featuredin-cen
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-cen
+    type: featuredin
+  title:
+    en: C&EN
+    de: Zeitschriftenartikel
+  tags:
+    - linkable
+- id: featuredin-caltechnews
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-caltechnews
+    type: featuredin
+  title:
+    en: Caltech News
+    de: Zeitschriftenartikel
+  tags:
+    - linkable
+- id: featuredin-nature
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-nature
+    type: featuredin
+  title:
+    en: Nature
+    de: Zeitschriftenartikel
+  tags:
+    - linkable
+- id: featuredin-physics
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-physics
+    type: featuredin
+  title:
+    en: Physics (APS)
+    de: Zeitschriftenartikel
+  tags:
+    - linkable
+- id: featuredin-science
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""     
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-science
+    type: featuredin
+  title:
+    en: Science (AAAS)
+    de: Zeitschriftenartikel
+  tags:
+    - linkable
+- id: featuredin
+  icon: star
+  props:
+    csl: article-journal
+    datacite_general: JournalArticle
+    datacite_type: ""
+    openaire_resourceType: "0001"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/article
+    schema.org: https://schema.org/ScholarlyArticle
+    subtype: featuredin-science
+    type: featuredin
+  title:
+    en: Featured In
+    de: Zeitschriftenartikel
