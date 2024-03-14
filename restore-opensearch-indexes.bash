@@ -18,11 +18,11 @@ ${APP_NAME}
 
 # SYNOPSIS
 
-${APP_NAME} REPO_ID
+${APP_NAME} [PATH_TO_OPENSEARCH_DUMP_DIR]
 
 # DESCRIPTION
 
-Restore the Opensearch indexes for an Invenio RDM instance from
+Restore the OpenSearch indexes for an Invenio RDM instance from
 a opensearch-dump directory. It uses the "opensearch-indexes.txt" for
 the index list. If you want to only restore some of the index you should
 edit the "opensearch-indexes.txt" file accordingly.
@@ -38,7 +38,7 @@ and runs via npm/NodeJS.
 Restore the Opensearch for caltechdata running on CaltechDATA.
 
 ~~~shell
-     sudo -u ubuntu ${APP_NAME} caltechdata
+     sudo -u ubuntu ${APP_NAME} /storage/OpenSearchBackups
 ~~~
 
 EOT
@@ -46,9 +46,7 @@ EOT
 }
 
 function restore_opensearch_to() {
-	REPO_ID="$1"
-	CONTAINER="${REPO_ID}_db_1"
-	BACKUP_DIR="$2"
+	BACKUP_DIR="$1"
 	#FIXME: Need to figure out how to identify the two indexes we want to backup to get the stats.
 	if [ "${BACKUP_DIR}" = "" ]; then
 		echo "Missing the backup directory name"
@@ -64,17 +62,21 @@ function restore_opensearch_to() {
 	fi
       
     while read -r INDEX_NAME; do
-		# Save the index mapping first, then save the data
-    	gunzip "${BACKUP_DIR}/${INDEX_NAME}.mapping.json.gz"
-    	elasticdump \
-    		--input "${BACKUP_DIR}/${INDEX_NAME}.mapping.json" \
-    		--output "http://localhost:9200/${INDEX_NAME}" \
-    		--type mapping
-    	gunzip  "${BACKUP_DIR}/${INDEX_NAME}.data.json.gz"
-    	elasticdump \
-    	    --intput "${BACKUP_DIR}/${INDEX_NAME}.data.json" \
-    	    --output "http://localhost:9200/${INDEX_NAME}" \
-    	    --type data
+		# Retrieve the index mapping first, then the index data
+		if [ -f "${BACKUP_DIR}/${INDEX_NAME}.mapping.json.gz" ]; then
+    	    gunzip "${BACKUP_DIR}/${INDEX_NAME}.mapping.json.gz"
+    	    elasticdump \
+    		    --input "${BACKUP_DIR}/${INDEX_NAME}.mapping.json" \
+    		    --output "http://localhost:9200/${INDEX_NAME}" \
+    		    --type mapping
+		fi
+		if [ -f "${BACKUP_DIR}/${INDEX_NAME}.data.json.gz" ]; then
+        	gunzip  "${BACKUP_DIR}/${INDEX_NAME}.data.json.gz"
+        	elasticdump \
+        	    --intput "${BACKUP_DIR}/${INDEX_NAME}.data.json" \
+        	    --output "http://localhost:9200/${INDEX_NAME}" \
+        	    --type data
+		fi
     done <"${BACKUP_DIR}/opensearch-indexes.txt"
 }
 
@@ -101,7 +103,10 @@ h | help | -h | --help)
 		usage
 		exit 1
 	fi
-	mkdir -p opensearch-dumps
-	run_restore "$1" "opensearch-dumps"
+    if [ "$1" != "" ] && [ -d "$1" ]; then
+	    run_restore "$1" 
+	else
+	    run_restore "opensearch-dumps"
+    fi
 	;;
 esac
