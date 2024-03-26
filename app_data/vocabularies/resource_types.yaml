@@ -114,7 +114,7 @@
     subtype: conference-paper
     type: conference
   title:
-    en: Paper
+    en: Conference Paper
     de: Konferenzbeitrag
   tags:
     - depositable
@@ -132,7 +132,7 @@
     subtype: conference-poster
     type: conference
   title:
-    en: Poster
+    en: Conference Poster
     de: Poster
   tags:
     - depositable
@@ -150,7 +150,7 @@
     subtype: conference-presentation
     type: conference
   title:
-    en: Presentation
+    en: Conference Presentation
     de: Präsentation
   tags:
     - depositable
@@ -168,8 +168,11 @@
     subtype: publication-conferenceproceeding
     type: publication
   title:
-    en: Conference proceeding
+    en: Conference Proceeding
     de: Tagungsband
+  tags:
+    - depositable
+    - linkable
 - id: publication-datamanagementplan
   icon: file alternate
   props:
@@ -432,6 +435,24 @@
     type: publication
   title:
     en: Documentation or Manual
+    de: Sonstige
+  tags:
+    - depositable
+    - linkable
+- id: publication-newsletter
+  icon: file alternate
+  props:
+    csl: document
+    datacite_general: Text
+    datacite_type: Newsletter
+    openaire_resourceType: "0020"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/other
+    schema.org: https://schema.org/CreativeWork
+    subtype: publication-newsletter
+    type: publication
+  title:
+    en: Newsletter
     de: Sonstige
   tags:
     - depositable
@@ -894,3 +915,4 @@
   title:
     en: Featured In
     de: Zeitschriftenartikel
+
