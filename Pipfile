@@ -20,6 +20,7 @@ invenio-s3 = "*"
 invenio-assets = "==v3.0.2"
 versioneer = "*"
 citeproc-py = {file = "../citeproc-py"}
+lxml-html-clean = "*"
 
 [requires]
 python_version = "3.9"
