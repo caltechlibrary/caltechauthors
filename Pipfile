@@ -18,6 +18,8 @@ invenio-saml = "*"
 sentry-sdk = "*"
 invenio-s3 = "*"
 invenio-assets = "==v3.0.2"
+versioneer = "*"
+citeproc-py = {file = "../citeproc-py"}
 
 [requires]
 python_version = "3.9"
