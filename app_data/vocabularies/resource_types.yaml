@@ -385,6 +385,7 @@
     en: Data paper
     de: Datenpapier
   tags:
+    - depositable
     - linkable
 - id: publication-standard
   icon: file alternate
