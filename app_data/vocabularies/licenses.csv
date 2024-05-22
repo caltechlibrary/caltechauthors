@@ -1,5 +1,6 @@
 id;title__en;description__en;icon;tags;props__url;props__scheme;props__osi_approved
 default;Default;No commercial reproduction, distribution, display or performance rights in this work are provided.;;recommended,all,software;;;n
+caltech-non-commercial;Non-Commercial Use;You are granted permission for individual, educational, research and non-commercial reproduction, distribution, display and performance of this work in any format.;;recommended,all,software;;;n
 apache-2.0;Apache License 2.0;A permissive license whose main conditions require preservation of copyright and license notices. Contributors provide an express grant of patent rights. Licensed works, modifications, and larger works may be distributed under different terms and without source code.;;recommended,all,software;http://www.apache.org/licenses/LICENSE-2.0;spdx;y
 bsd-3-clause;"BSD 3-Clause ""New"" or ""Revised"" License";;;all,software;https://opensource.org/licenses/BSD-3-Clause;spdx;y
 cc-by-1.0;Creative Commons Attribution 1.0 Generic;;;all,data;https://creativecommons.org/licenses/by/1.0/legalcode;spdx;
