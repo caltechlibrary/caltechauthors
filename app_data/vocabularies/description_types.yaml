@@ -46,12 +46,6 @@
   title:
     en: Additional Information
     de: Sonstige
-- id: additional
-  props:
-    datacite: Other
-  title:
-    en: Additional Information
-    de: Sonstige
 - id: acknowledgement
   props:
     datacite: Other
