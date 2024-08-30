@@ -29,15 +29,6 @@
   allow:
     - superuser-access
 - active: true
-  email: gsporter@caltech.edu
-  username: gsporter
-  full_name: Porter, George
-  confirmed: true
-  roles:
-    - admin
-  allow:
-    - superuser-access
-- active: true
   email: tonyd@caltech.edu
   username: tonyd
   full_name: Diaz, Tony
@@ -53,11 +44,6 @@
   full_name: Keswick, Tommy
   confirmed: true
 - active: true
-  email: joy@caltech.edu
-  username: joy
-  full_name: Painter, Joy
-  confirmed: true
-- active: true
   email: dtwrub@caltech.edu
   username: dtwrub
   full_name: Wrublewski, Donna
@@ -66,11 +52,6 @@
   email: briney@caltech.edu
   username: briney
   full_name: Briney, Kristin
-  confirmed: true
-- active: true
-  email: kwhatley@caltech.edu
-  username: kwhatley
-  full_name: Whatley, Kara
   confirmed: true
 - active: true
   email: dld-dev@library.caltech.edu

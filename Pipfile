@@ -7,23 +7,15 @@ verify_ssl = true
 check-manifest = ">=0.25"
 
 [packages]
-caltechauthors = {editable="True", path="./site"}
+invenio-app-rdm = {extras = ["opensearch2", "s3"], version = "~=13.0.0b1.dev2"}
+caltechauthors = {editable = true, path="./site"}
+
 uwsgi = ">=2.0"
 uwsgitop = ">=0.11"
 uwsgi-tools = ">=1.1.1"
-python-dotenv = "*"
-invenio-i18n = "==2.0.0"
-invenio-app-rdm = {version = "~=12.0.0b2.dev8", extras = ["opensearch2", "postgresql"]}
-invenio-saml = "*"
-sentry-sdk = "*"
-invenio-s3 = "*"
-invenio-assets = "==v3.0.2"
-versioneer = "*"
-citeproc-py = {file = "../citeproc-py"}
-lxml-html-clean = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.12"
 
 [pipenv]
 allow_prereleases = false
