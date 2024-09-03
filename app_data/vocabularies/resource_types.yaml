@@ -512,6 +512,24 @@
   tags:
     - depositable
     - linkable
+- id: publication-retraction
+  icon: file alternate
+  props:
+    csl: article
+    datacite_general: Text
+    datacite_type: Retraction
+    openaire_resourceType: "0020"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/other
+    schema.org: https://schema.org/CreativeWork
+    subtype: publication-retraction
+    type: publication
+  title:
+    en: Retraction
+    de: Sonstige
+  tags:
+    - depositable
+    - linkable
 - id: publication-oralhistory
   icon: file alternate
   props:
