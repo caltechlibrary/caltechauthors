@@ -14,16 +14,6 @@ relationtypes:
 licenses:
   pid-type: lic
   data-file: vocabularies/licenses.csv
-names:
-  pid-type: names
-  data-file: vocabularies/names_orcid.yaml
-affiliations:
-  pid-type: aff
-  schemes:
-    - id: ROR
-      name: Research Organization Registry
-      uri: "https://ror.org/"
-      data-file: vocabularies/affiliations_ror.yaml
 creatorsroles:
   pid-type: crr
   data-file: vocabularies/roles.yaml
