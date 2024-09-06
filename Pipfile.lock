@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4ade84393358cec37aa9ad01e0a477abe595d0509251099359f5422c1dcf020c"
+            "sha256": "3cd39bcdf67dda4982a0ff1826de2574234c7a7807d9be3c9e4788b55e847ac4"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1054,12 +1054,9 @@
             "version": "==1.3.1"
         },
         "invenio-communities": {
-            "hashes": [
-                "sha256:2370d3ec2b622361a2ec5ed298b6c503a6179418c1f3df6931b39a4b05924d4b",
-                "sha256:744f04ea0fb928cc528e899a8aaf602023b6ab9373acc9cb230e02834a43bde9"
-            ],
+            "git": "https://github.com/caltechlibrary/invenio-communities.git",
             "markers": "python_version >= '3.8'",
-            "version": "==15.0.0"
+            "ref": "1cc8136590aaa65af8d11aff00c7137c89655757"
         },
         "invenio-config": {
             "hashes": [
@@ -1354,11 +1351,11 @@
         },
         "invenio-vocabularies": {
             "hashes": [
-                "sha256:15658b8521cc06d77f6ff8252284d151f836a8bb837408332de5e17582c3d561",
-                "sha256:5a54c9784068769f49029ba4496fdafbe45ccf5556dcadb66b333641c2272bf8"
+                "sha256:69b282e6bb4d19b27181e1048d28b11a0fc407e260a46564a5bfc5e9e416072d",
+                "sha256:e78501ee207d7100137083b939e07efad522bbdad3d31929f72888c435e54749"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==5.0.2"
+            "version": "==5.0.3"
         },
         "invenio-webhooks": {
             "hashes": [
@@ -3252,11 +3249,11 @@
         },
         "types-python-dateutil": {
             "hashes": [
-                "sha256:9649d1dcb6fef1046fb18bebe9ea2aa0028b160918518c34589a46045f6ebd98",
-                "sha256:f5889fcb4e63ed4aaa379b44f93c32593d50b9a94c9a60a0c854d8cc3511cd57"
+                "sha256:27c8cc2d058ccb14946eebcaaa503088f4f6dbc4fb6093d3d456a49aef2753f6",
+                "sha256:9706c3b68284c25adffc47319ecc7947e5bb86b3773f843c73906fd598bc176e"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==2.9.0.20240821"
+            "version": "==2.9.0.20240906"
         },
         "types-pyyaml": {
             "hashes": [
