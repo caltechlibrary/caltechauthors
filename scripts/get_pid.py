@@ -6,7 +6,7 @@ from invenio_files_rest.models import ObjectVersion
 from invenio_utilities_tuw.utils import get_identity_for_user, get_record_service
 from invenio_pidstore.models import PersistentIdentifier
 
-@click.command('delete_pid')
+@click.command('get_pid')
 @click.argument('pid', type=str)
 @with_appcontext
 def get_pid(pid):
