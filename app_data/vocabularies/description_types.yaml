@@ -136,3 +136,9 @@
   title:
     en: Featured In
     de: Sonstige
+- id: supplemental-material
+  props:
+    datacite: Other
+  title:
+    en: Supplemental Material
+    de: Sonstige
