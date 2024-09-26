@@ -93,7 +93,17 @@ function run_restore() {
 		echo "Cannot find docker program, aborting"
 		exit 1
 	fi
+	echo "stopping rdm, rdm_rest and rdm_celery"
+	sudo systemctl stop rdm_celery
+	sudo systemctl stop rdm_rest
+	sudo systemctl stop rdm
+	echo "restore_postgres_from $2 $DOCKER ${1//_/-}"
 	restore_postgres_from "$2" "$DOCKER" "${1//_/-}"
+	echo "starting rdm, rdm_rest and rdm_celery"
+	sudo systemctl start rdm
+	sudo systemctl start rdm_rest
+	sudo systemctl start rdm_celery
+	echo "complated"
 }
 
 #
