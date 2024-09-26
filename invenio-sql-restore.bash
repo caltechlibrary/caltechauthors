@@ -27,6 +27,9 @@ CONTAINER_NAME is the name of your Invenio instance and will be
 used as the prefix to the backup up filename. BACKUP_NAME is the
 path to your SQL dump file.
 
+To find the CONTAINER_NAME you do a 'docker ps' and look under the
+column "STATUS NAMES".
+
 NOTE: the SQL backups are usually gzipped, you need to gunzip them
 the one you want to restore.
 
