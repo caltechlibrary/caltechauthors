@@ -34,14 +34,9 @@
 {%- endmacro %}
 
 
-{% macro list_string_values(field, values) %}
+{% macro list_string_values(values) %}
   {% for value in values %}
-    {% set search_url = field | custom_fields_search(value) %}
-    {% if search_url %}
-      <a href="{{ search_url }}">{{ value }}</a> {{ ", " if not loop.last }}
-    {% else %}
       {{ value }}{{ ", " if not loop.last }}
-    {% endif %}
   {% endfor %}
 {% endmacro %}
 
@@ -222,12 +217,7 @@
 
 {% macro list_float_values(field, values) %}
   {% for value in values %}
-    {% set search_url = field | custom_fields_search(value) %}
-    {% if search_url %}
-      <a href="{{ search_url }}">{{ "%0.2f" | format(value) }}</a>{{ " , " if not loop.last }}
-    {% else %}
       {{ "%0.2f" | format(value) }}{{ ", " if not loop.last }}
-    {% endif %}
   {% endfor %}
 {% endmacro %}
 
@@ -239,25 +229,10 @@
       {% if field_cfg.template %}
         {% include field_cfg.template %}
       {% else %}
-        <dt class="ui tiny header">
-          {{ field_cfg.props.label }}
-          {% set namespace_url = field_cfg.display_url if field_cfg.display_url is defined else field_cfg.field | namespace_url %}
-          {% if namespace_url %}
-            <a href="{{ namespace_url }}" aria-label="{{ namespace_url }}">
-              <i class="icon external" aria-hidden="true"></i>
-            </a>
-          {% endif %}
-        </dt>
+        <dt class="ui tiny header">{{ field_cfg.props.label }}</dt>
         {% if field_value is string %}
-          <dd>
-            {% set search_url = (field_value | pid_url) if field_cfg.props.is_identifier else (field_cfg.field | custom_fields_search(field_value | safe)) %}
-            {% if search_url %}
-              <a href="{{ search_url }}">{{ field_value | safe }}</a>
-            {% else %}
-              {{ field_value | safe }}
-            {% endif %}
-          </dd>
-        {% elif field_value is boolean %}
+        <dd>{{ field_value | safe }}</dd>
+	{% elif field_value is boolean %}
           <dd>
             {% if field_value %}
               {{ field_cfg.props.trueLabel }}
@@ -268,7 +243,7 @@
         {% elif field_cfg.is_vocabulary %}
           <dd>{{ list_vocabulary_values(field_cfg.field, field_value, field_cfg) }}</dd>
         {% elif field_value is iterable and field_value|length > 0 and field_value[0] is string %}
-          <dd>{{ list_string_values(field_cfg.field, field_value) }}</dd>
+          <dd>{{ list_string_values(field_value) }}</dd>
         {% elif field_value is iterable and field_value|length > 0 and field_value[0] is number %}
           <dd>{{ list_float_values(field_cfg.field, field_value) }}</dd>
         {% else %}
