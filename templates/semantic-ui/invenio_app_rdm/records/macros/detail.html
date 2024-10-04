@@ -199,9 +199,9 @@
   {% endfor %}
 {% endmacro %}
 
-{% macro list_vocabulary_values(field, values, field_cfg) %}
+{% macro list_vocabulary_values(field, values) %}
   {% if values.title_l10n is defined %}
-    {% set search_url = field | custom_fields_search(values.title_l10n, field_cfg) %}
+    {% set search_url = field | custom_vocab_fields_search(values.title_l10n, "title") %}
     {% if search_url %}
       <a href="{{ search_url }}">{{ values.title_l10n | safe }}</a>
     {% else %}
@@ -241,7 +241,7 @@
             {% endif %}
           </dd>
         {% elif field_cfg.is_vocabulary %}
-          <dd>{{ list_vocabulary_values(field_cfg.field, field_value, field_cfg) }}</dd>
+          <dd>{{ list_vocabulary_values(field_cfg.field, field_value) }}</dd>
         {% elif field_value is iterable and field_value|length > 0 and field_value[0] is string %}
           <dd>{{ list_string_values(field_value) }}</dd>
         {% elif field_value is iterable and field_value|length > 0 and field_value[0] is number %}
