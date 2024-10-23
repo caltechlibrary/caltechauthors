@@ -142,3 +142,9 @@
   title:
     en: Supplemental Material
     de: Sonstige
+- id: contact-information
+  props:
+    datacite: Other
+  title:
+    en: Contact Information
+    de: Sonstige
