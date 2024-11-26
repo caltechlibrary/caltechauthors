@@ -468,7 +468,7 @@
     openaire_type: publication
     eurepo: info:eu-repo/semantics/other
     schema.org: https://schema.org/CreativeWork
-    subtype: publication-issue
+    subtype: publication-journal
     type: publication
   title:
     en: Journal Issue
