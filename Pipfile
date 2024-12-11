@@ -11,6 +11,7 @@ invenio-app-rdm = {git = "https://github.com/caltechlibrary/invenio-app-rdm.git"
 idutils = {git = "https://github.com/caltechlibrary/idutils.git", ref = "authors"}
 invenio-rdm-records = {git = "https://github.com/caltechlibrary/invenio-rdm-records.git", ref = "authors-2024"}
 invenio-communities = {git = "https://github.com/caltechlibrary/invenio-communities.git", ref = "authors-2024"}
+invenio-logging = {extras = ["sentry_sdk"]}
 caltechauthors = {editable = true, path="./site"}
 python-dotenv = "*"
 uwsgi = ">=2.0"

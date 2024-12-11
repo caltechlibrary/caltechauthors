@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7fef841f5600ef5c89f03f8c59489120c84c07b20f334a5ac591c08a176d944a"
+            "sha256": "bb1cec74bf8080d018b24437862689ab7595f4224daf61de9c334b3a1d34d25b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1163,6 +1163,9 @@
             "version": "==1.1.5"
         },
         "invenio-logging": {
+            "extras": [
+                "sentry_sdk"
+            ],
             "hashes": [
                 "sha256:2bcd75284a52e1a317c2a5aa8de44b14e7852054ffef84f5adf7307e61df781f",
                 "sha256:4a77eccd6d5a8be0d144972ddbb885d725403e89b3915a6ada1b5c51c15922c0"
@@ -2891,6 +2894,16 @@
             "markers": "python_version >= '3.8'",
             "version": "==0.10.4"
         },
+        "sentry-sdk": {
+            "extras": [
+                "flask"
+            ],
+            "hashes": [
+                "sha256:608887855ccfe39032bfd03936e3a1c4f4fc99b3a4ac49ced54a4220de61c9c1",
+                "sha256:a16c997c0f4e3df63c0fc5e4207ccb1ab37900433e0f72fef88315d317829a26"
+            ],
+            "version": "==1.45.1"
+        },
         "setuptools": {
             "hashes": [
                 "sha256:8199222558df7c86216af4f84c30e9b34a61d8ba19366cc914424cdbd28252f6",
@@ -3383,7 +3396,7 @@
                 "sha256:ca899ca043dcb1bafa3e262d73aa25c465bfb49e0bd9dd5d59f1d0acba2f8fac",
                 "sha256:e7d814a81dad81e6caf2ec9fdedb284ecc9c73076b62654547cc64ccdcae26e9"
             ],
-            "markers": "python_version >= '3.10'",
+            "markers": "python_version >= '3.6'",
             "version": "==2.2.3"
         },
         "uwsgi": {
