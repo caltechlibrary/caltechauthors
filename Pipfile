@@ -17,6 +17,7 @@ python-dotenv = "*"
 uwsgi = ">=2.0"
 uwsgitop = ">=0.11"
 uwsgi-tools = ">=1.1.1"
+invenio-oaiserver = "==2.3.0"
 
 [requires]
 python_version = "3.12"
