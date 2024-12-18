@@ -37,13 +37,8 @@
               </button>
             </form>
           {%- endwith %}
-          {%- block recoverable %}
-            {%- if security.recoverable %}
-              <div class="ui basic segment">
-                <a href="{{ url_for_security('forgot_password') }}">{{ _('Forgot password?') }}</a>
-              </div>
-            {%- endif %}
-          {%- endblock recoverable %}
+	  {%- block recoverable %}
+  	  {%- endblock recoverable %}
           </div>
         </div>
         {%- endif %}
