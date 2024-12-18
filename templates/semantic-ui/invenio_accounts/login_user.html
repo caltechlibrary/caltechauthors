@@ -15,12 +15,12 @@
     <div class="ui login segment padded">
       <div class="divider hidden"></div>
       {%- block form_header %}
-        <h3 class="ui login header">{{ _('Log in to %(sitename)s', sitename=config.THEME_SITENAME) }}</h3>
+        <h1 class="ui small login header">{{ _('Log in to account') }}</h1>
       {%- endblock form_header %}
 
       {%- block form_outer %}
         {%- if config.ACCOUNTS_LOCAL_LOGIN_ENABLED %}
-        <div class="ui accordion">
+          <div class="ui accordion">
           <div class="title trigger">
             <i class="dropdown icon"></i>
             Log in with a special account
@@ -32,8 +32,8 @@
               {{ form.hidden_tag() }}
               {{ render_field(form.email, icon="user icon", autofocus=True, errormsg='email' in form.errors) }}
               {{ render_field(form.password, icon="lock icon", errormsg='password' in form.errors) }}
-              <button type="submit" class="ui fluid large submit primary basic button">
-                <i class="ui sign-in icon"></i>{{ _('Log in') }}
+              <button type="submit" class="ui fluid large submit primary button">
+                <i class="ui sign-in icon" aria-hidden="true"></i>{{ _('Log in') }}
               </button>
             </form>
           {%- endwith %}
@@ -42,17 +42,18 @@
           </div>
         </div>
         {%- endif %}
+        </div>
+        </div>
       {%- endblock form_outer %}
       <div class="divider hidden"></div>
-
     </div>
 
     {%- block registerable %}
       {%- if security.registerable %}
-        <div class="ui primary segment padded text-muted">
+        <p class="ui primary segment padded text-muted">
             {% trans sitename=config.ACCOUNTS_SITENAME %}New to {{ sitename }}?{% endtrans %}
             <a href="{{ url_for_security('register', next=request.args.get('next')) }}">{{ _('Sign up') }}</a>
-        </div>
+        </p>
       {%- endif %}
     {%- endblock registerable %}
   </div>
