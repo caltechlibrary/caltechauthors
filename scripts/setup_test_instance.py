@@ -43,6 +43,15 @@ records = [
 for record in records:
     metadata = get_metadata(record, authors=True)
     metadata["pids"].pop("oai")
+    files = metadata.pop("files")
+    file_names = []
+    for file in files["entries"].keys():
+        file_names.append(file)
+        with open(file, "wb") as f:
+            r = requests.get(
+                f"https://authors.library.caltech.edu/records/{record}/files/{file}?download=1"
+            )
+            f.write(r.content)
     response = caltechdata_write(
         metadata,
         token,
@@ -50,5 +59,6 @@ for record in records:
         production=False,
         community=community_id,
         publish=True,
+        files=file_names,
     )
     print(response)
