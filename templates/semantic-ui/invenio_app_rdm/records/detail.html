@@ -125,25 +125,6 @@
       </div>
     {% endif %}
     <!-- /PREVIEW HEADER -->
-
-    {% if record.is_published and record.links.latest_html and not record.versions.is_latest %}
-      <div class="ui warning flashed bottom attached manage message">
-        <div class="ui container">
-          <div class="ui relaxed grid">
-            <div class="column">
-              <div class="row">
-                <p>
-                  {% trans link_start=('<a href="' + record.links.latest_html + '"><b>')|safe, link_end='</b></a>'|safe %}
-                    There is a {{ link_start }}newer version{{ link_end }} of the record
-                    available.
-                  {% endtrans %}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    {% endif %}
   </section>
 
 
