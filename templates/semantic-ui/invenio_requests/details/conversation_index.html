@@ -1,0 +1,94 @@
+{# -*- coding: utf-8 -*-
+
+  This file is part of Invenio.
+  Copyright (C) 2016-2020 CERN.
+
+  Invenio is free software; you can redistribute it and/or modify it
+  under the terms of the MIT License; see LICENSE file for more details.
+#}
+
+{% if base_template|default(false) %}
+  {%- extends base_template %}
+{% else %}
+  {%- extends config.BASE_TEMPLATE %}
+{% endif %}
+
+{% block page_header %} {% endblock %}
+{% block page_footer %} {% endblock %}
+
+{% block page_body %}
+  {% set title = _("Request ") %}
+  {%- block request_body %}
+    <div class="ui container request-detail-page">
+
+      {%- block request_header %}
+        <div class="ui stackable grid">
+
+          <div class="sixteen wide mobile ten wide tablet eight wide computer column">
+            <h2 class="ui header">
+              {% block request_header_title %}
+                {{ invenio_request.title }}
+              {% endblock request_header_title %}
+            </h2>
+          </div>
+
+          <div class="sixteen wide mobile six wide tablet eight wide computer column right floated right aligned">
+            {% block request_actions %}
+              <div id="request-actions" class="rel-mb-1"></div>
+            {% endblock request_actions %}
+          </div>
+        </div>
+
+        <div class="ui divider"></div>
+
+      {%- endblock request_header %}
+
+    {%- block request_timeline %}
+    <div id="request-detail"
+         data-record='{{ invenio_request | tojson }}'
+         data-default-query-config='{{ dict(size=config["REQUESTS_TIMELINE_PAGE_SIZE"]) | tojson }}'
+         data-user-avatar='{{ user_avatar | tojson }}'
+         data-permissions='{{ permissions | tojson }}'
+    >{# react app root #}
+      <div class="ui grid">
+        <div class="stretched row">
+          <div class="thirteen wide column">
+            <div class="ui">
+              <div class="ui fluid placeholder">
+                <div class="image header">
+                  <div class="line"></div>
+                  <div class="line"></div>
+                </div>
+                <div class="paragraph">
+                  {% for i in range(6) %}
+                    <div class="line"></div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="three wide column">
+            {% for i in range(6) %}
+              <div class="ui fluid placeholder">
+                <div class="image header">
+                  <div class="line"></div>
+                  <div class="line"></div>
+                </div>
+              </div>
+              <div class="ui divider"></div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {%- endblock request_timeline %}
+
+    </div>
+  {% endblock request_body %}
+{% endblock page_body %}
+
+{% block javascript %}
+  {{ super() }}
+  {% include config.THEME_JAVASCRIPT_TEMPLATE %}
+  {{ webpack['invenio-requests-base.js'] }}
+{% endblock %}
