@@ -35,7 +35,7 @@ descriptiontypes:
   data-file: vocabularies/description_types.yaml
 caltechgroups:
   pid-type: ctgrp
-  data-file: vocabularies/caltech_groups.jsonl
+  data-file: vocabularies/caltech_groups.yaml
 caltechjournals:
   pid-type: ctjrnl
   data-file: vocabularies/caltech_journals.jsonl

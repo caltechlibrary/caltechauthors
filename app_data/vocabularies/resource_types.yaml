@@ -278,6 +278,7 @@
     en: Project Report
     de: Projektergebnis
   tags:
+    - depositable
     - linkable
 - id: publication-report
   icon: file alternate
