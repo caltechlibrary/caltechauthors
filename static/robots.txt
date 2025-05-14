@@ -1,5 +1,40 @@
 User-agent: *
 Disallow: /search
 Disallow: /api
+Disallow: /api/requests
 Disallow: /administration
-Crawl-delay: 10
+Crawl-delay: 30
+
+User-agent: Baiduspider
+Disallow:
+
+User-agent: Googlebot
+Disallow: /*.rdf$
+Crawl-delay: 20
+
+User-agent: AhrefsBot
+Disallow:
+
+User-agent: meta-externalagent
+Disallow:
+
+User-agent: anthropic-ai
+Disallow:
+
+User-agent: ClaudeBot
+Crawl-delay: 30
+
+User-agent: openai
+Disallow:
+
+User-agent: ChatGPT
+Disallow:
+
+User-agent: bingbot
+Crawl-delay: 30
+
+User-agent: Yandex
+Disallow:
+
+User-agent: *bot
+Crawl-delay: 60
