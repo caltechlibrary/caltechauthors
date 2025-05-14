@@ -49,9 +49,6 @@
 - id: Caltech-Civil-Engineering-Report
   title:
     en: Caltech Civil Engineering Report
-- id: cellsort
-  title:
-    en: Caltech Flow Cytometry and Cell Sorting Facility (Cellsort)
 - id: Cellsort
   title:
     en: Caltech Flow Cytometry and Cell Sorting Facility (Cellsort)
@@ -112,7 +109,7 @@
 - id: Division-of-Biology-and-Biological-Engineering
   title:
     en: Division of Biology and Biological Engineering (BBE)
-- id: Division-of-Chemestry-and-Chemical-Engineering
+- id: Division-of-Chemistry-and-Chemical-Engineering
   title:
     en: Division of Chemistry and Chemical Engineering (CCE)
 - id: Division-of-Engineering-and-Applied-Science
