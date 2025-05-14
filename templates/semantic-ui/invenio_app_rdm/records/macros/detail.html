@@ -55,13 +55,15 @@
 {% macro show_add_descriptions(add_descriptions) %}
   {% for add_description in add_descriptions %}
     <section id="additional-description-{{ loop.index }}" class="rel-mt-2 rich-input-content"
-             aria-label="{{ _( add_description.type.title_l10n ) }}">
-      <h2>{{ add_description.type.title_l10n }} <span
-        class="text-muted language">{{ '(' + add_description.lang.title_l10n + ')' if add_description.lang }}</span>
-      </h2>
+      aria-label="{{ _( add_description.type.title_l10n ) if add_description.type is defined else 'Missing description type!' }}">
+      <h2>{{ add_description.type.title_l10n if add_description.type is defined else _('Missing description type!') }}
+        <span class="text-muted language">
+          {{ '(' + add_description.lang.title_l10n + ')' if add_description.lang is defined else '' }}
+        </span>
+	    </h2>
 
-      {% if add_description.type.id == "notes" %}
-        <div class="ui message warning">
+         {% if add_description.type is defined and add_description.type.id == "notes" %}
+	    <div class="ui message warning">
           {{ add_description.description | sanitize_html() | safe }}
         </div>
       {% else %}
@@ -74,8 +76,8 @@
 
 {% macro show_dates(dates) %}
   {% for date in dates %}
-    <dt class="ui tiny header">{{ date.type.title_l10n }}</dt>
-    <dd>
+  <dt class="ui tiny header">{{ date.type.title_l10n if date.type is defined else 'Unknown date type' }}</dt>  
+  <dd>
       <div>{{ date.date }}</div>
       <div class="text-muted">{{ date.description }}</div>
     </dd>
@@ -151,16 +153,19 @@
         {{ identifier.resource_type.title_l10n }}:
       {% endif %}
 
-      {% set url = identifier.identifier|pid_url %}
+      {% set ident_val = identifier.identifier if identifier.identifier is defined else '' %}
+      {% set url = ident_val|pid_url %}
       {% if url %}
         <a href="{{ url }}" target="_blank" title="{{ _('Opens in new tab') }}">
           {{ identifier.identifier }}
         </a>
       {% else %}
-        {{ identifier.identifier }}
+        {{ ident_val }}
       {% endif %}
 
-      {{ ' (' + identifier.scheme | get_scheme_label + ')' }}
+      {% if identifier.scheme is defined %}
+        {{ ' (' ~ (identifier.scheme|get_scheme_label) ~ ')' }}
+      {% endif %}
     </dd>
   {% endfor %}
 {% endmacro %}
@@ -168,8 +173,8 @@
 
 {% macro show_related_identifiers(related_identifiers) %}
   <dl class="details-list">
-    {%- for group in related_identifiers | groupby('relation_type.title_l10n') %}
-      <dt class="ui tiny header">{{ group.grouper }}</dt>
+      {%- for group in (related_identifiers|selectattr("relation_type","defined")|list) | groupby('relation_type.title_l10n') %}
+	  <dt class="ui tiny header">{{ group.grouper }}</dt>
       {{ _identifiers_for_group(group.list) }}
     {%- endfor %}
   </dl>
