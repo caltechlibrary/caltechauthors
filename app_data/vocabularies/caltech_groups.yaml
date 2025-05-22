@@ -10,6 +10,9 @@
 - id: Astronomy-Department
   title:
     en: Astronomy Department
+- id: Autonomous-Robotics-and-Control-Lab
+  title:
+    en: Autonomous Robotics and Control Lab
 - id: Big-Bear-Solar-Observatory
   title:
     en: Big Bear Solar Observatory
@@ -82,6 +85,9 @@
 - id: Center-for-Autonomous-Systems-and-Technologies-(CAST)
   title:
     en: Center for Autonomous Systems and Technologies (CAST)
+- id: Center-for-Data-Driven-Discovery
+  title:
+    en: Center for Data-Driven Discovery (CDDD)
 - id: Center-for-Geomechanics-and-Mitigation-of-Geohazards-(GMG)
   title:
     en: Center for Geomechanics and Mitigation of Geohazards (GMG)
@@ -94,9 +100,6 @@
 - id: Community-Seismic-Network
   title:
     en: Community Seismic Network
-- id: Community-Sesimic-Network
-  title:
-    en: Community Sesimic Network
 - id: Computation-&-Neural-Systems-Technical-Reports
   title:
     en: Computation & Neural Systems Technical Reports
@@ -166,6 +169,9 @@
 - id: INQNET
   title:
     en: INQNET
+- id: Information-Management-Systems-and-Services
+  title:
+    en: Information Management Systems and Services (IMSS)
 - id: Infrared-Processing-and-Analysis-Center-(IPAC)
   title:
     en: Infrared Processing and Analysis Center (IPAC)
@@ -202,6 +208,9 @@
 - id: Lunatic-Asylum
   title:
     en: Lunatic Asylum
+- id: MICS-Lab
+  title:
+    en: MICS Lab (Mixed Mode Integrated Circuits and Systems)
 - id: Materials-and-Process-Simulation-Center
   title:
     en: Materials and Process Simulation Center
@@ -220,6 +229,9 @@
 - id: Munger-Africana-Library-Notes
   title:
     en: Munger Africana Library Notes
+- id: NASA-Astronauts
+  title:
+    en: NASA Astronauts
 - id: NuSTAR
   title:
     en: NuSTAR
@@ -241,6 +253,9 @@
 - id: Plasma-Laboratory
   title:
     en: Plasma Laboratory
+- id: Presidents-Group
+  title:
+    en: President's Group
 - id: Resnick-Sustainability-Institute
   title:
     en: Resnick Sustainability Institute
@@ -280,6 +295,9 @@
 - id: TAPIR
   title:
     en: TAPIR
+- id: Technology-Transfer-and-Corporate-Partnerships
+  title:
+    en: Technology Transfer and Corporate Partnerships (OTTCP)
 - id: Thirty-Meter-Telescope
   title:
     en: Thirty Meter Telescope
