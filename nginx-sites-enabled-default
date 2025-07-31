@@ -43,6 +43,7 @@ server {
     include uwsgi_params;
     uwsgi_buffering off;
     uwsgi_request_buffering off;
+    chunked_transfer_encoding off;
     uwsgi_param Host $host;
     uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
     uwsgi_param X-Forwarded-Proto $scheme;
@@ -59,12 +60,13 @@ server {
   # Another location is defined in order to allow large file uploads in the files
   # API without exposing the other parts of the application to receive huge
   # request bodies.
-  location ~ /api/records/.+/draft/files/.+/content {
+  location ~ /api/records/.+/draft/files/.+/content(/[0-9]+)?/?$ {
     gzip off;
     uwsgi_pass 127.0.0.1:5001;
     include uwsgi_params;
     uwsgi_buffering off;
     uwsgi_request_buffering off;
+    chunked_transfer_encoding off;
     uwsgi_param Host $host;
     uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
     uwsgi_param X-Forwarded-Proto $scheme;

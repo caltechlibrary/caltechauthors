@@ -98,6 +98,20 @@ services:
         condition: service_started
       mq:
         condition: service_started
+
+  # Jobs scheduler
+  scheduler:
+    extends:
+      file: docker-services.yml
+      service: app
+    command: ["celery -A invenio_app.celery beat --scheduler invenio_jobs.services.scheduler:RunScheduler --loglevel=INFO"]
+    image: caltechauthors:latest
+    depends_on:
+      mq:
+        condition: service_started
+      db:
+        condition: service_started
+
 volumes:
   static_data:
   data:
