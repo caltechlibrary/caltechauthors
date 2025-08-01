@@ -3,7 +3,7 @@ import requests
 from caltechdata_api import get_metadata, caltechdata_write
 
 token = os.environ["RDMTOK"]
-host = "https://authors.caltechlibrary.dev"
+host = "https://127.0.0.1"
 
 # Create a caltechauthors community
 
