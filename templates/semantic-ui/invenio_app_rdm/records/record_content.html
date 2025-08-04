@@ -1,16 +1,3 @@
-{#
-  Copyright (C) 2020-2024 CERN.
-  Copyright (C) 2020-2021 Northwestern University.
-  Copyright (C) 2021-2023 TU Wien.
-  Copyright (C) 2021 Graz University of Technology.
-  Copyright (C) 2021 New York University.
-
-  Invenio RDM Records is free software; you can redistribute it and/or modify
-  it under the terms of the MIT License; see LICENSE file for more details.
-#}
-
-
-
 <div class="ui container">
     <div class="ui relaxed grid mt-5">
       <div class="two column row top-padded">
@@ -18,17 +5,17 @@
         {# Main content #}
         <article
           class="sixteen wide tablet eleven wide computer column main-record-content">
-          {% if record.access.record == 'restricted' %}
+          {% if record_ui["access"]["record"] == 'restricted' %}
             <section id="record-access-status"
-                     class="ui {{ record.ui.access_status.message_class }} message rel-mt-1"
+                     class="ui {{ record_ui["ui"]["access_status"]["message_class"] }} message rel-mt-1"
                      aria-label="{{ _('Record access information') }}"
             >
-              <i class="{{ record.ui.access_status.icon }} icon" aria-hidden="true"></i>
-              <strong>{{ record.ui.access_status.title_l10n }}</strong>
-              {{ record.ui.access_status.description_l10n }}
+              <i class="{{ record_ui["ui"]["access_status"]["icon"] }} icon" aria-hidden="true"></i>
+              <strong>{{ record_ui["ui"]["access_status"]["title_l10n"] }}</strong>
+              {{ record_ui["ui"]["access_status"]["description_l10n"] }}
 
-              {% if record.access.embargo.reason %}
-                <p>{{ _("Reason") }}: {{ record.access.embargo.reason }}</p>
+              {% if record_ui["access"]["embargo"]["reason"] %}
+                <p>{{ _("Reason") }}: {{ record_ui["access"]["embargo"]["reason"] }}</p>
               {% endif %}
             </section>
           {% endif %}
@@ -39,10 +26,10 @@
 
               {%- block record_header_button -%}
 
-                {% if is_preview and not is_preview_submission_request and can_manage_record and is_draft %}
+                {% if is_preview and not is_preview_submission_request and can_curate_record and is_draft %}
                   <nav class="back-navigation rel-pb-2 pl-0"
                        aria-label="{{ _('Back-navigation') }}">
-                    {%- set back_page = url_for('invenio_app_rdm_records.deposit_edit', pid_value=record.id) -%}
+                    {%- set back_page = url_for('invenio_app_rdm_records.deposit_edit', pid_value=record_ui.id) -%}
                     {%- set back_btn_label = _('Back to edit') -%}
                     <a class="ui button labeled icon small compact"
                        href="{{ back_page }}">
@@ -64,13 +51,15 @@
                       <i class="cog icon"></i> {{ _('Manage record') }}
                     </button>
                   </div>
-
                   <div id="recordManagementMobile"
                        role="dialog"
                        class="ui flowing popup transition hidden"
-                       data-record='{{ record | tojson }}'
+                       data-record='{{ record_ui | tojson }}'
                        data-permissions='{{ permissions | tojson }}'
                        data-is-draft="{{ is_draft | tojson }}"
+                       {% if config.RDM_DETAIL_SIDE_BAR_MANAGE_ATTRIBUTES_EXTENSION_TEMPLATE %}
+                        {% include config.RDM_DETAIL_SIDE_BAR_MANAGE_ATTRIBUTES_EXTENSION_TEMPLATE %}
+                       {% endif %}
                   >
                   </div>
                 </section>
@@ -82,35 +71,35 @@
                   <div class="two column row">
                     <div class="left floated left aligned column">
                       <span class="ui" title="{{ _('Publication date') }}">
-                        {{ _('Published') }} {{ record.ui.publication_date_l10n_long }}
+                        {{ _('Published') }} {{ record_ui["ui"]["publication_date_l10n_long"] }}
                       </span>
                       <span
-                        class="label text-muted"> | {{ _('Version {version_number}').format(version_number=record.ui.version) }}</span>
+                        class="label text-muted"> | {{ _('Version {version_number}').format(version_number=record_ui["ui"]["version"]) }}</span>
                     </div>
                     <div class="right floated right aligned column">
 
-                      {% if record.ui.resource_type %}
+                      {% if record_ui["ui"]["resource_type"] %}
                         <span role="note"
                               class="ui label horizontal small neutral mb-5"
                               aria-label="{{ _('Resource type') }}"
                         >
-                          {{ record.ui.resource_type.title_l10n }}
+                          {{ record_ui["ui"]["resource_type"]["title_l10n"] }}
                         </span>
                       {% endif %}
 
                       <span role="note"
-                            class="ui label horizontal small access-status {{ record.ui.access_status.id }} mb-5"
-                            data-tooltip="{{ record.ui.access_status.description_l10n }}"
+                            class="ui label horizontal small access-status {{ record_ui["ui"]["access_status"]["id"] }} mb-5"
+                            data-tooltip="{{ record_ui["ui"]["access_status"]["description_l10n"] }}"
                             data-inverted=""
                             aria-label="{{ _('Access status') }}"
                       >
-                        {% if record.ui.access_status.icon %}
-                          <i class="icon {{ record.ui.access_status.icon }}"
+                        {% if record_ui["ui"]["access_status"]["icon"] %}
+                          <i class="icon {{ record_ui["ui"]["access_status"]["icon"] }}"
                              aria-hidden="true"></i>
                         {% endif %}
                         <span
-                          aria-label="{{ record.ui.access_status.description_l10n }}">
-                          {{ record.ui.access_status.title_l10n }}
+                          aria-label="{{ record_ui["ui"]["access_status"]["description_l10n"] }}">
+                          {{ record_ui["ui"]["access_status"]["title_l10n"] }}
                         </span>
                       </span>
                     </div>
@@ -128,7 +117,7 @@
                 <h1 id="record-title"
                     class="wrap-overflowing-text">{{ metadata.title }}</h1>
 
-                {% if record.ui.creators or record.ui.contributors %}
+                {% if record_ui["ui"]["creators"] or record_ui["ui"]["contributors"] %}
                   <section id="creatibutors"
                            aria-label="{{ _('Creators and contributors') }}">
                     {%- include "invenio_app_rdm/records/details/creatibutors.html" %}
@@ -137,21 +126,15 @@
               </section>
             {%- endblock record_title -%}
 
-            {# Citation & Description #}
+            {# Description #}
             {%- block record_content -%}
-	    <div style="margin-top: 20px">
-	      <section id="citation" aria-label="{{ _('Record citation') }}">
-                {%- include "invenio_app_rdm/records/details/citation.html" %}
-              </section>
-	    </div>
-
               {%- include "invenio_app_rdm/records/details/description.html" %}
             {%- endblock record_content -%}
 
             {# Files #}
             {%- block record_files -%}
               {# record has files BUT passed files are empty. This happens when we display are request. #}
-              {%- if record.files.enabled -%}
+              {%- if record_ui["files"]["enabled"] -%}
                 <section id="record-files" class="rel-mt-2 rel-mb-3"
                          aria-label="{{ _('Files') }}">
                   {%- if permissions.can_read_files -%}
@@ -160,18 +143,18 @@
                     {%- if files|length > 0 -%}
                       <h2 id="files-heading">{{ _('Files') }}</h2>
                       {%- if files|has_previewable_files -%}
-                        {%-set preview_file = files|select_preview_file(default_preview=record.files.default_preview) %}
-                        {{ preview_file_box(preview_file, record.id, is_preview, record, include_deleted) }}
+                        {%-set preview_file = files|select_preview_file(default_preview=record_ui["files"]["default_preview"]) %}
+                        {{ preview_file_box(preview_file, record_ui["id"], is_preview, record, include_deleted) }}
                       {%- endif -%}
-                      {{ file_list_box(files, record.id, is_preview, include_deleted, record, permissions) }}
+                      {{ file_list_box(files, record_ui["id"], is_preview, include_deleted, record, permissions) }}
                     {% endif %}
                   {% else %}
                     {# record has files BUT user does not have permission to see files #}
                     <div
-                      class="ui accordion panel mb-10 {{ record.ui.access_status.id }}"
+                      class="ui accordion panel mb-10 {{ record_ui["ui"]["access_status"]["id"] }}"
                       href="#files-preview-accordion-panel">
                       <h3
-                        class="active title panel-heading {{ record.ui.access_status.id }} m-0">
+                        class="active title panel-heading {{ record_ui["ui"]["access_status"]["id"] }} m-0">
                         <div role="button" id="files-preview-accordion-trigger"
                              tabindex="0" class="trigger"
                              aria-controls="files-preview-accordion-panel">
@@ -183,15 +166,15 @@
                            aria-labelledby="files-preview-accordion-trigger"
                            class="active content preview-container pt-0">
                         <div
-                          class="ui {{ record.ui.access_status.message_class }} message file-box-message rel-pl-1 rel-pr-1">
-                          <i class="ui {{ record.ui.access_status.icon }} icon"
+                          class="ui {{ record_ui["ui"]["access_status"]["message_class"] }} message file-box-message rel-pl-1 rel-pr-1">
+                          <i class="ui {{ record_ui["ui"]["access_status"]["icon"] }} icon"
                              aria-hidden="true"></i>
                           <h4
-                            class="inline">{{ record.ui.access_status.title_l10n }}</h4>
-                          <p>{{ record.ui.access_status.description_l10n }}</p>
+                            class="inline">{{ record_ui["ui"]["access_status"]["title_l10n"] }}</h4>
+                          <p>{{ record_ui["ui"]["access_status"]["description_l10n"] }}</p>
 
-                          {% if record.access.embargo.reason %}
-                            <p>{{ _("Reason") }}: {{ record.access.embargo.reason }}</p>
+                          {% if record_ui["access"]["embargo"]["reason"] %}
+                            <p>{{ _("Reason") }}: {{ record_ui["access"]["embargo"]["reason"] }}</p>
                           {% endif %}
 
                           {% block record_files_access_request %}
@@ -201,8 +184,8 @@
                               <p>
                                 {{ _("If you would like to request access to these files, please fill out the form below.") }}
                               </p>
-                              {%- if record.parent.access.settings %}
-                                {%- set accept_conditions_text = record.parent.access.settings.accept_conditions_text %}
+                              {%- if record_ui["parent"]["access"]["settings"] %}
+                                {%- set accept_conditions_text = record_ui["parent"]["access"]["settings"]["accept_conditions_text"] %}
                               {%- endif %}
 
                               {%- if accept_conditions_text %}
@@ -235,7 +218,7 @@
                   <section id="record-media-files" aria-label="{{ _('System files') }}">
                     {%- set media_files = media_files | order_entries | selectattr("status", "==", "completed") | list %}
                     {%- if media_files|length > 0 -%}
-                      {{ media_file_list_box(media_files, record.id, is_preview, include_deleted, record, permissions) }}
+                      {{ media_file_list_box(media_files, record_ui["id"], is_preview, include_deleted, record, permissions) }}
                     {%- endif %}
                   </section>
                 {%- endif %}
@@ -288,3 +271,4 @@
       </div>
     </div>
   </div>
+

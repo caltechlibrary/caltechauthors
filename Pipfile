@@ -9,7 +9,7 @@ check-manifest = ">=0.25"
 [packages]
 invenio-app-rdm = {version = "~=13.0.0", extras = ["opensearch2", "s3"]}
 idutils = {git = "https://github.com/caltechlibrary/idutils.git", ref = "authors"}
-invenio-logging = {extras = ["sentry_sdk"]}
+invenio-logging = {extras = ["sentry"]}
 caltechauthors = {editable = true, path="./site"}
 python-dotenv = "*"
 uwsgi = ">=2.0"

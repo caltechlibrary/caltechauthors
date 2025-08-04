@@ -3,7 +3,7 @@ import requests
 from caltechdata_api import get_metadata, caltechdata_write
 
 token = os.environ["RDMTOK"]
-host = "https://127.0.0.1"
+host = "https://127.0.0.1:5000"
 
 # Create a caltechauthors community
 
@@ -18,17 +18,19 @@ community = {
 }
 
 
-response = requests.post(
-    host + "/api/communities",
-    json=community,
-    headers={"Authorization": f"Bearer {token}"},
-)
-if response.status_code != 201:
-    print("Failed to create community")
-    print(response.text)
-    exit()
+#response = requests.post(
+#    host + "/api/communities",
+#    json=community,
+#    headers={"Authorization": f"Bearer {token}"},
+#    verify=False
+#)
+#if response.status_code != 201:
+#    print("Failed to create community")
+#    print(response.text)
+#    exit()
 
-community_id = response.json()["id"]
+#community_id = response.json()["id"]
+community_id = "bda34dcd-e4e5-4f05-ae27-bc70071d28de"
 
 print("Created community with id", community_id)
 
@@ -60,5 +62,6 @@ for record in records:
         community=community_id,
         publish=True,
         files=file_names,
+        verify=False
     )
     print(response)

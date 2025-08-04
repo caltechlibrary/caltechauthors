@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "627d58fecd9e804409e9050a71ff5286e2ffaa495a79576c08ccefd61aa69232"
+            "sha256": "8f9bfdd6c26c7696e6d611c927ef357a74bc9a619c4735ee35ea26e62dd09d4d"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -543,11 +543,11 @@
         },
         "commonmeta-py": {
             "hashes": [
-                "sha256:63a38983f565d8ae5a6296d7e63efb1b8e0952f9e03756f775d6d4307f45f7d0",
-                "sha256:8b4c3a4bb6d125b686f58b691287534030a45f5e9711094a0f7ceec7a8aa1f1e"
+                "sha256:47979f8a3856c9350477442d4dee1ea5b7184f9250bf5fd35f50ef6971fa4ef0",
+                "sha256:92bcadf27d8d2313640e7d29b40eb378442d02d1cd231a949c77aeb86938b114"
             ],
             "markers": "python_version >= '3.9' and python_version < '4.0'",
-            "version": "==0.145"
+            "version": "==0.146"
         },
         "counter-robots": {
             "hashes": [
@@ -1224,11 +1224,11 @@
                 "s3"
             ],
             "hashes": [
-                "sha256:16e3306d8f343e04fc329fa976711a573aae775273cfe703f49fca81df2627db",
-                "sha256:8d1702e2bd21b978ef03c8bc5fca067f0216b0c2e119fb404f6e7f6998c27022"
+                "sha256:4a7edb7b3c28bba4215aafafd9bea6e82cd4e1d306151c5b4b47bd04c0f34d1a",
+                "sha256:b686dff0a971a92ddfd32669f5714e0be9969a987402ca705455c7c6beba089b"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==13.0.0"
+            "version": "==13.0.1"
         },
         "invenio-assets": {
             "hashes": [
@@ -1388,7 +1388,7 @@
         },
         "invenio-logging": {
             "extras": [
-                "sentry_sdk"
+                "sentry"
             ],
             "hashes": [
                 "sha256:25c4c86c240ca7ba5bcc2e46fb0d447e35eca7ac15e49ef7d7c62916ac06bdae",
@@ -1569,11 +1569,11 @@
         },
         "invenio-sitemap": {
             "hashes": [
-                "sha256:88399c4b58c8413bd849fd530bda8770cc17c5c50462f4ec843c9a0c47cb6039",
-                "sha256:d64f30605399b9799fc1b9b9cbabe882f3aa23066784e3d0825fcb2d6475d5c3"
+                "sha256:990a698ce06b42ca4160263c1276ff2941b09ea109441f48ad108410a8ec3c1f",
+                "sha256:e78f27a64612c015c0b0d81b5af4a9c511e071fd79d72eb60b4e1ac712c197d9"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==0.1.2"
+            "version": "==0.2.0"
         },
         "invenio-stats": {
             "hashes": [
@@ -3539,6 +3539,16 @@
             ],
             "markers": "python_version >= '3.9'",
             "version": "==2025.7.0"
+        },
+        "sentry-sdk": {
+            "extras": [
+                "flask"
+            ],
+            "hashes": [
+                "sha256:608887855ccfe39032bfd03936e3a1c4f4fc99b3a4ac49ced54a4220de61c9c1",
+                "sha256:a16c997c0f4e3df63c0fc5e4207ccb1ab37900433e0f72fef88315d317829a26"
+            ],
+            "version": "==1.45.1"
         },
         "setuptools": {
             "hashes": [
