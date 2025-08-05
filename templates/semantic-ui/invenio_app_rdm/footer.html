@@ -1,22 +1,11 @@
 <footer id="rdm-footer-element">
-  {%- block footer_top %}
-    <div class="footer-top">
-      <div class="ui container">
-        {%- block footer_top_left %}
-          <div class="ui stackable borderless secondary menu">
-            <a class="item" href="/about">About</a>
-            <a class="item" href="/policies">Policies</a>
-	    <a class="item" href="/help">Help</a>
-            <a class="item" href="mailto:library@caltech.edu">Contact Us</a>
-            <a class="item" href="https://feeds.library.caltech.edu/recent/combined.rss"><img alt="RSS" class="ui image" style="height:20px;" src="/static/images/rss.png"></a>
-	    <div class="right menu">
-              <div class="item">
-                {% trans invenio_rdm="http://inveniosoftware.org/products/rdm" %}Powered by <a href="{{invenio_rdm}}">InvenioRDM</a>{% endtrans %}
-              </div>
-            </div>
-          </div>
-        {%- endblock footer_top_left %}
-      </div>
-    </div>
-  {%- endblock footer_top %}
+ <script type="module" src="https://media.library.caltech.edu/cl-webcomponents/footer-global-lite.js"></script> 
+<footer-global-lite
+    custom
+    header="CaltechAUTHORS">
+    <a slot="custom-links" class="custom-links" aria-label="footer navigation" href="https://authors.library.caltech.edu/about">About</a>
+    <a slot="custom-links" class="custom-links" aria-label="footer navigation" href="https://authors.library.caltech.edu/policies">Policies</a>
+    <a slot="custom-links" class="custom-links" aria-label="footer navigation" href="https://authors.library.caltech.edu/help">Help</a> 
+    <a slot="custom-links" class="custom-links" aria-label="footer navigation" href="https://inveniosoftware.org/products/rdm">Powered by InvenioRDM</a> 
+</footer-global-lite>
 </footer>

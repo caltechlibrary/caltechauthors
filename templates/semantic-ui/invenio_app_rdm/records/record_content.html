@@ -126,8 +126,14 @@
               </section>
             {%- endblock record_title -%}
 
-            {# Description #}
+          {# Citation & Description #}
             {%- block record_content -%}
+	    <div style="margin-top: 20px">
+	      <section id="citation" aria-label="{{ _('Record citation') }}">
+                {%- include "invenio_app_rdm/records/details/citation.html" %}
+              </section>
+	    </div>
+
               {%- include "invenio_app_rdm/records/details/description.html" %}
             {%- endblock record_content -%}
 
