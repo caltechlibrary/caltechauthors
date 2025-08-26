@@ -10,7 +10,7 @@ function usage() {
 	cat <<EOT
 % ${APP_NAME}() ${APP_NAME} user manual
 % R. S. Doiel
-% August 17, 2022
+% August 11, 2025
 
 # NAME
 
@@ -32,8 +32,7 @@ Backup the Postgres running in 'caltechdata_db_1' and write them
 to '/var/backups/postgres'.
 
 ~~~shell
-     ${APP_NAME} caltechauthors_db_1 '\dt'
-	bash invenio-sql-command.bash  caltechauthors_db_1 'SELECT json from vocabularies_metadata;'
+	bash ${APP_NAME}  caltechauthors_db_1 'SELECT json from vocabularies_metadata;'
 ~~~
 
 EOT

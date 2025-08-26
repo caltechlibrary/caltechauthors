@@ -10,7 +10,7 @@ function usage() {
 	cat <<EOT
 % ${APP_NAME}() ${APP_NAME} user manual
 % R. S. Doiel
-% August 17, 2022
+% August 11, 2025
 
 # NAME
 
@@ -27,20 +27,13 @@ CONTAINER_NAME is the name of your Invenio instance and will be
 used as the prefix to the backup up filename. BACKUP_NAME is the
 path to your SQL dump file.
 
-To find the CONTAINER_NAME you do a 'docker ps' and look under the
-column "STATUS NAMES".
-
-NOTE: the SQL backups are usually gzipped, you need to gunzip them
-the one you want to restore.
-
 # EXAMPLES
 
-Restore the Postgres running in 'caltechauthors_db_1' and write them
-to '/home/ubuntu/invenio-sql-backups/caltechauthors_db_1-caltechauthors-2024-09-11.sql'
+Restore the Postgres running in 'caltechdata_db_1' and write them
+to '/var/backups/postgres/caltechdata-dump-2022-09-19.sql'.
 
 ~~~shell
-  ${APP_NAME} caltechauthors_db_1 \\
-  /home/ubuntu/invenio-sql-backups/caltechauthors_db_1-caltechauthors-2024-09-11.sql
+     ${APP_NAME} caltechdata_db_1 /var/backups/postgres/caltechdata-dump-2022-09-19.sql
 ~~~
 
 EOT
@@ -93,17 +86,7 @@ function run_restore() {
 		echo "Cannot find docker program, aborting"
 		exit 1
 	fi
-	echo "stopping rdm, rdm_rest and rdm_celery"
-	sudo systemctl stop rdm_celery
-	sudo systemctl stop rdm_rest
-	sudo systemctl stop rdm
-	echo "restore_postgres_from $2 $DOCKER ${1//_/-}"
-	restore_postgres_from "$2" "$DOCKER" "${1//_/-}"
-	echo "starting rdm, rdm_rest and rdm_celery"
-	sudo systemctl start rdm
-	sudo systemctl start rdm_rest
-	sudo systemctl start rdm_celery
-	echo "complated"
+	restore_postgres_from "$2" "$DOCKER" "$1"
 }
 
 #

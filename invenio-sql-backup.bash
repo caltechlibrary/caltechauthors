@@ -10,7 +10,7 @@ function usage() {
 	cat <<EOT
 % ${APP_NAME}() ${APP_NAME} user manual
 % R. S. Doiel
-% Sept 11, 2024
+% August 11, 2025
 
 # NAME
 
@@ -29,10 +29,10 @@ used as the prefix to the backup up filename.
 # EXAMPLES
 
 Backup the Postgres running in 'caltechauthors_db_1' and write them
-to '/home/ubuntu/invenio-sql-backups'.
+to '/var/backups/postgres'.
 
 ~~~shell
-  ${APP_NAME} caltechauthors_db_1 /home/ubuntu/invenio-sql-backups
+     ${APP_NAME} caltechauthors_db_1 /var/backups/postgres
 ~~~
 
 EOT
@@ -98,7 +98,7 @@ function run_backups() {
 		echo "Cannot find docker program, aborting"
 		exit 1
 	fi
-	backup_postgres_to "$DOCKER" "$1" "${2//_/-}"
+	backup_postgres_to "$DOCKER" "$1" "$2"
 }
 
 #
