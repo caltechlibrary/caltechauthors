@@ -31,14 +31,23 @@ Bring up RDM:
   b. Ignore the lower right dialog about opening the port in your browser or editor, it is NOT ready yet and links to the wrong URL
   c. You'll be ready for the next step when you see "Successfully setup all services."
 6. In the terminal type `invenio-cli services status`
-  a. You should that redis, postgresql and search are running
-7. In the terminal type `invenio-cli run`
+  a. You should see that redis, postgresql and search are running
+7. Load affiliations and funders
+  a. run `pipenv run invenio vocabularies update --vocabulary affiliations --origin ror-http
+  b. run `pipenv run invenio vocabularies update --vocabulary funders --origin ror-http`
+8. In the terminal type `invenio-cli run`
   a. This will take a while (many minutes), get some coffee
   b. As always ignore the "Open in Browser" button, the URL is wrong as well as premature
   c. After waiting for RDM to sort itself the log messages in the Terminal console will ebb
-8. Open the following URL in your web browser <https://127.0.0.1:5000/>
+9. Copy a .env file with secrets (mostly email credentials)
+10. Set up storage with `pipenv run invenio files location s3-default s3://caltechauthors-test --default`
+11. Open the following URL in your web browser <https://127.0.0.1:5000/>
   a. Note the https
   b. Click through the scary warning about the SSL certificate
+12. Reset your password using the "Forgot Password" link on the login page
+13. Get an InvenioRDM token for your account
+14. Set as `export RDMTOK=<your token>` in the terminal window
+15. Set up test records with `python scripts/setup_test_instance.py`
 
 ## Shutdown your development setup
 

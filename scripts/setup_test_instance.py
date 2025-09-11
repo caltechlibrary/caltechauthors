@@ -30,7 +30,7 @@ community = {
 #    exit()
 
 #community_id = response.json()["id"]
-community_id = "bda34dcd-e4e5-4f05-ae27-bc70071d28de"
+community_id = "c9531a11-3fc2-4b8f-b2eb-f810314dd09e"
 
 print("Created community with id", community_id)
 
