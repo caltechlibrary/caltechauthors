@@ -35,12 +35,14 @@ createdb --username caltechauthors caltechauthors
 psql --username caltechauthors caltechauthors
 # You should be the Postgres shell insite the Bash shell of the contiainer (\i takes a while to run)
 \i caltechauthors-dump_2025-08-28.sql
+# Make sure your connected to the populated DB
+\c caltechauthors
 # Run Tom's SQL migration code
 \i tom_sketch_migrate_11_0_to_13_0.sql 
 exit # psql
 exit # docker shell
 # Now we're back in the VS Code terminal, run the upgrade script.
-pipenv run scripts/migrate_11_0_to_12_0.py # NOTE: This is failed, but in a previous run it worked. Note sure if it is required.
+pipenv run python scripts/migrate_11_0_to_12_0.py # NOTE: This is failed, but in a previous run it worked. Note sure if it is required.
 pipenv run invenio alembic upgrade
 ~~~
 

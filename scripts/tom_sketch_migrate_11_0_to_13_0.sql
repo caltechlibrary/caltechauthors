@@ -12,14 +12,13 @@ set
 where
   json->>'schema' != 'local://records/parent-v3.0.0.json';
 
--- FIXED: remove already set in production, RSD/TM 2025-09-11
--- UPDATE rdm_parents_metadata
--- SET json = jsonb_set(
---   json,
---   '{access,owned_by}',
---   jsonb_build_object('user', json->'access'->'owned_by'->0->'user')
--- )
--- WHERE json->'access'->'owned_by'->0->'user' is not null;
+UPDATE rdm_parents_metadata
+SET json = jsonb_set(
+  json,
+  '{access,owned_by}',
+  jsonb_build_object('user', json->'access'->'owned_by'->0->'user')
+)
+WHERE json->'access'->'owned_by'->0->'user' is not null;
 
 update
   rdm_parents_metadata
