@@ -23,7 +23,7 @@ Starting with step #7, this is what I type at the terminal in VS Code
 
 ~~~shell
 # Copy the dumped Gunzipped SQL file to the (NOTE the SQL file has a datestamp in it)
-docker cp caltechauthors-dump_2025-09-11.sql caltechauthors-db-1:./
+docker cp caltechauthors-dump_2025-09-12.sql caltechauthors-db-1:./
 # Copy Tom's script to the container
 docker cp scripts/tom_sketch_migrate_11_0_to_13_0.sql caltechauthors-db-1:./
 # Run shell inside Postgres container
@@ -34,7 +34,7 @@ createdb --username caltechauthors caltechauthors
 # Run psql from inside the container
 psql --username caltechauthors caltechauthors
 # You should be the Postgres shell insite the Bash shell of the contiainer (\i takes a while to run)
-\i caltechauthors-dump_2025-09-11.sql
+\i caltechauthors-dump_2025-09-12.sql
 # Make sure your connected to the populated DB
 \c caltechauthors
 # Run Tom's SQL migration code
@@ -42,7 +42,7 @@ psql --username caltechauthors caltechauthors
 exit # psql
 exit # docker shell
 # Now we're back in the VS Code terminal, run the upgrade script.
-pipenv run python scripts/migrate_11_0_to_12_0.py # NOTE: This is failed, but in a previous run it worked. Note sure if it is required.
+pipenv run python scripts/migrate_11_0_to_12_0.py
 pipenv run invenio alembic upgrade
 ~~~
 
