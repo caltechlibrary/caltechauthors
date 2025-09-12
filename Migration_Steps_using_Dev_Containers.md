@@ -12,11 +12,15 @@
 9. Run a shell session in the Postgres docker container
 10. Drop and recreate the caltechauthors database using `dropdb` and `createdb` cli
 11. Once the database is empty start a `psql` connected to the caltechauthors db, use `\i` to load the SQL dump file
-12. While still in psql shell use `\i` to run toms_sketch_migrate_11_to_13.sql and exit `psql` shell, exit docker container
-13. Run `pipenv run scripts/migrate_11_0_to_12_0.py`
-14. Run `pipenv run invenio alembic upgrade`
-15. Rebuild the indexes, follow [building_indexes.md](building_indexes.md) first example
-16. Run `invenio-cli run` and test
+12. Exit out of `psql`, Exit out of the docker shell
+13. Run `pipenv run invenio alembic upgrade` to upgade the database from the VS Code terminal
+14. Run a shell session in the Postgres docker container
+15. Once the docker shell run `psql`
+16. Use `\i` to run toms_sketch_migrate_11_to_13.sql
+17. Exit `psql` shell, exit docker container
+18. Run `pipenv run scripts/migrate_11_0_to_12_0.py`
+19. Rebuild the indexes, follow [building_indexes.md](building_indexes.md) first example
+20. Run `invenio-cli run` and test
 
 
 Starting with step #7, this is what I type at the terminal in VS Code
@@ -35,18 +39,23 @@ createdb --username caltechauthors caltechauthors
 psql --username caltechauthors caltechauthors
 # You should be the Postgres shell insite the Bash shell of the contiainer (\i takes a while to run)
 \i caltechauthors-dump.sql
-# Make sure your connected to the populated DB
-\c caltechauthors
+# Exit psql and docker shell
+exit # psql
+exit # docker sshell
+pipenv run invenio alembic upgrade
+# jump back into the docker shell running postgres
+docker container exec -it caltechauthors-db-1 /bin/bash
+# Run psql from inside the container
+psql --username caltechauthors caltechauthors
 # Run Tom's SQL migration code
 \i tom_sketch_migrate_11_0_to_13_0.sql 
 exit # psql
 exit # docker shell
 # Now we're back in the VS Code terminal, run the upgrade script.
 pipenv run invenio shell scripts/migrate_11_0_to_12_0.py
-pipenv run invenio alembic upgrade
 ~~~
 
-This takes you through step #15. Now we need to [rebuild the indexes](building_indexes.md). So type
+This takes you through step #19. Now we need to [rebuild the indexes](building_indexes.md). So type
 the following commands in the VS Code terminal you're already running
 
 ~~~shell
@@ -56,8 +65,6 @@ pipenv run invenio index delete --force --yes-i-know "${search_prefix}rdmrecords
 pipenv run invenio index init
 # if you have records custom fields
 pipenv run invenio rdm-records custom-fields init
-# if you have communities custom fields
-##pipenv run invenio communities custom-fields init ## skipped in devcontainer test
 pipenv run invenio rdm rebuild-all-indices
 ~~~
 
