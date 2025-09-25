@@ -7,7 +7,7 @@ verify_ssl = true
 check-manifest = ">=0.25"
 
 [packages]
-invenio-app-rdm = {git = "https://github.com/caltechlibrary/invenio-app-rdm.git", ref = "v13.0.2.caltechauthors.b1", extras = ["opensearch2", "s3"]}
+invenio-app-rdm = {git = "https://github.com/caltechlibrary/invenio-app-rdm.git", ref = "v13.0.3.caltechauthors.b1", extras = ["opensearch2", "s3"]}
 idutils = {git = "https://github.com/caltechlibrary/idutils.git", ref = "authors"}
 invenio-logging = {extras = ["sentry"]}
 caltechauthors = {editable = true, path="./site"}
