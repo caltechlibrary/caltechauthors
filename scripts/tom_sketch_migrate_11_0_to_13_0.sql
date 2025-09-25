@@ -6,11 +6,11 @@ update
 set
   json = jsonb_set(
     json,
-    '{schema}',
+    '{$schema}',
     '"local://records/parent-v3.0.0.json"'
   )
 where
-  json->>'schema' != 'local://records/parent-v3.0.0.json';
+  json->>'$schema' != 'local://records/parent-v3.0.0.json';
 
 UPDATE rdm_parents_metadata
 SET json = jsonb_set(
@@ -35,11 +35,11 @@ update
 set
   json = jsonb_set(
     json,
-    '{schema}',
+    '{$schema}',
     '"local://records/record-v6.0.0.json"'
   )
 where
-  json->>'schema' != 'local://records/record-v6.0.0.json';
+  json->>'$schema' != 'local://records/record-v6.0.0.json';
 
 -- NOTE: You the jsonb_set will not create a multipart path if it does not exist. 
 -- You have to create each object before it's attributes.
@@ -66,11 +66,11 @@ update
 set
   json = jsonb_set(
     json,
-    '{schema}',
+    '{$schema}',
     '"local://records/record-v6.0.0.json"'    
   )
 where
-  json->>'schema' != 'local://records/record-v6.0.0.json';
+  json->>'$schema' != 'local://records/record-v6.0.0.json';
 
 update
   rdm_drafts_metadata

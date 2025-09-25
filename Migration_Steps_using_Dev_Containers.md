@@ -57,7 +57,7 @@ exit # docker sshell
 1. Run `pipenv run invenio alembic upgrade` to upgade the database from the VS Code terminal
 2. Run a shell session in the Postgres docker container
 3. Once the docker shell run `psql`
-4. Use `\i` to run toms_sketch_migrate_11_to_13.sql5
+4. Use `\i` to run toms_sketch_migrate_11_to_13.sql
 5. Exit `psql` shell, exit docker container
 6. Run `pipenv run scripts/migrate_11_0_to_12_0.py`
 9. Rebuild the indexes, follow [building_indexes.md](building_indexes.md) first example
