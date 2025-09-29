@@ -1,8 +1,12 @@
 # list of pages:
 - url: /help
   title: CaltechAUTHORS Help
-  description: Help documentation for
+  description: Help documentation
   template: help.html
+- url: /help/statistics
+  title: CaltechAUTHORS Usage Statistics Help
+  description: Usage statistics help documentation 
+  template: help/statistics.html
 - url: /policies
   title: CaltechAUTHORS Policies
   description: CaltechAUTHORS Policies
