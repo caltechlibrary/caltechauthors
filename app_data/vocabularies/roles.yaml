@@ -232,3 +232,27 @@
   title:
     en: Corresponding
     de: Andere
+- id: advisor
+  props:
+    datacite: Supervisor
+  title:
+    en: Advisor
+    de: Andere
+- id: co-advisor
+  props:
+    datacite: Supervisor
+  title:
+    en: Co-Advisor
+    de: Andere
+- id: committee-chair
+  props:
+    datacite: Other
+  title:
+    en: Committee Chair
+    de: Andere
+- id: committee-member
+  props:
+    datacite: Other
+  title:
+    en: Committee Member
+    de: Andere
