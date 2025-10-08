@@ -24,7 +24,7 @@ platform](https://inveniosoftware.org/products/rdm/).
 ## Introduction
 
 This repository was initialized following [the InvenioRDM
-instructions/](https://inveniordm.docs.cern.ch/install). It was then
+instructions](https://inveniordm.docs.cern.ch/install). It was then
 customized to meet the needs of the Caltech community. This is only one
 deployment example, and may or not be appropriate for your specific
 institution and IT setup. 
@@ -43,7 +43,7 @@ https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`, then
 reboot and type `nvm install 18`
 
 ### Install InvenioRDM
-
+```
 cd caltechauthors
 invenio-cli install 
 invenio-cli services setup --no-demo-data
