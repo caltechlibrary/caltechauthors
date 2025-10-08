@@ -1,6 +1,10 @@
 #!/bin/bash
 APP_NAME="$(basename "$0")"
 
+# NOTE: We're running in a container so these are always known.
+DB_NAME="caltechauthors"
+DB_USERNAME="caltechauthors"
+
 #
 # This script can bring invenio-rdm down in an orderly fashion
 # or start it back up.
@@ -28,11 +32,11 @@ used as the prefix to the backup up filename.
 
 # EXAMPLES
 
-Backup the Postgres running in 'caltechauthors_db_1' and write them
+Backup the Postgres running in '${DB_NAME}-db-1' and write them
 to '/var/backups/postgres'.
 
 ~~~shell
-     ${APP_NAME} caltechauthors_db_1 /var/backups/postgres
+     ${APP_NAME} ${DB_NAMAE}-db-1 /var/backups/postgres
 ~~~
 
 EOT
