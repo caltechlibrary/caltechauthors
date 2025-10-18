@@ -24,8 +24,8 @@ services:
     image: caltechauthors-frontend
     restart: "unless-stopped"
     ports:
-      - "${DOCKER_SERVICES_IP_BIND:-127.0.0.1}:80"
-      - "${DOCKER_SERVICES_IP_BIND:-127.0.0.1}:443"
+      - "${DOCKER_SERVICES_IP_BIND:-127.0.0.1}:80:80"
+      - "${DOCKER_SERVICES_IP_BIND:-127.0.0.1}:443:443"
   cache:
     image: redis:7
     restart: "unless-stopped"
