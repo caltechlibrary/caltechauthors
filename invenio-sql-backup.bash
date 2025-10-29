@@ -67,7 +67,7 @@ function backup_postgres_to() {
 		"${DB_NAME}" \
 		>"${BACKUP_FILE}"
 	if [ -f "${BACKUP_FILE}" ]; then
-		gzip "${BACKUP_FILE}"
+		gzip -f "${BACKUP_FILE}"
 	else
 		echo "WARNING: ${BACKUP_FILE} not found!"
 	fi
