@@ -153,14 +153,13 @@ guidelines](https://github.com/caltechlibrary/caltechdata/blob/main/CONTRIBUTING
 
 ## License
 
-Software produced by the Caltech Library is Copyright © 2024-2-25 California Institute of Technology.  This software is freely distributed under a BSD/MIT type license.  Please see the [LICENSE](LICENSE) file for more information.
+Software produced by the Caltech Library is Copyright © 2024-2025 California Institute of Technology.  This software is freely distributed under a BSD/MIT type license.  Please see the [LICENSE](LICENSE) file for more information.
 
 
 ## Authors and history
 
 Tom Morrell led the CaltechDATA InvenioRDM development. Tommy Keswick helped with themeing and site design.  Robert Doiel managed our v12 upgrade and backup processes. TUGraz and all the other
-InvenioRDM partners were instrumental in getting all the customizations
-working.
+InvenioRDM partners were instrumental in getting all the customizations working.
 
 ## Acknowledgments
 
