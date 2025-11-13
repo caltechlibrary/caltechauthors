@@ -1,50 +1,96 @@
-{#
-  Copyright (C) 2020 CERN.
-  Copyright (C) 2020 Northwestern University.
+{%- extends config.BASE_TEMPLATE %}
 
-  Invenio App RDM is free software; you can redistribute it and/or modify it
-  under the terms of the MIT License; see LICENSE file for more details.
-#}
-{%- if not record.is_published and record.versions.index and record.versions.index > 1%}
+{%- if community and community.theme and community.theme.enabled %}
+  {%- block css %}
+  {{ super() }}
+  <link rel="stylesheet" type="text/css" href="/communities/{{community.slug}}/community-theme-{{ community.revision_id }}.css">
+  {%- if config.APP_RDM_DEPOSIT_NG_FILES_UI_ENABLED %}
+  {{ webpack['uppy-file-uploader.css'] }}
+  {%- endif %}
+  {%- endblock %}
+{%- endif %}
+
+{%- if not record.is_published and record.versions.index and record.versions.index > 1 %}
   {%- set title = _("New version") %}
 {%- elif not record.is_published %}
   {%- set title = _("New upload") %}
 {% else %}
   {%- set title = _("Edit upload") %}
 {%- endif %}
-{%- extends config.BASE_TEMPLATE %}
 
 {%- block page_body %}
+
+{%- if community_use_jinja_header %}
+{%- include "invenio_communities/details/header.html" %}
+{%- endif %}
+
   {%- if record %}
-  <input id="deposits-record" type="hidden" name="deposits-record" value='{{record | tojson }}'></input>
+    <input id="deposits-record" type="hidden" name="deposits-record"
+           value='{{ record | tojson }}'>
+
+    <input id="deposits-record-locked-files" type="hidden"
+           name="deposits-record-locked-files"
+           value='{{ files_locked | tojson }}'>
   {%- endif %}
-  <input id="deposits-draft-community" type="hidden"
+
+  {%- if preselectedCommunity %}
+    <input id="deposits-draft-community" type="hidden" name="deposits-draft-community"
+           value='{{ preselectedCommunity | tojson }}'>
+  {%- endif %}  
+
+     <input id="deposits-draft-community" type="hidden"
   name="deposits-draft-community"
   value='{"access": {
       "visibility": "public"
     },
-    "id": "aedd135f-227e-4fdf-9476-5b3fd011bac6",
+    "id": "524939f5-3917-42f1-baaa-cf2e044e8204",
     "links": {
-      "logo": "https://authors.library.caltech.edu/api/communities/aedd135f-227e-4fdf-9476-5b3fd011bac6/logo"
+      "logo": "https://authors.library.caltech.edu/api/communities/524939f5-3917-42f1-baaa-cf2e044e8204/logo"
     },
     "metadata": {
       "title": "CaltechAUTHORS"
     },
     "slug": "caltechauthors",
     "ui":{"permissions":{"can_include_directly": false}}}'></input>
-  {%- if files %}
-  <input id="deposits-record-files" type="hidden" name="deposits-record-files" value='{{files | tojson }}'></input>
+  
+{%- if files %}
+    <input id="deposits-record-files" type="hidden" name="deposits-record-files"
+           value='{{ files | tojson }}'>
   {%- endif %}
+
+  <input type="hidden" name="deposits-record-restriction-grace-period"
+          value='{{ config.RDM_RECORDS_RESTRICTION_GRACE_PERIOD.days | tojson }}'>
+  <input type="hidden" name="deposits-allow-record-restriction"
+          value='{{ config.RDM_RECORDS_ALLOW_RESTRICTION_AFTER_GRACE_PERIOD | tojson }}'>
+  {% if record_deletion %}
+    <input type="hidden" name="deposits-record-deletion" value='{{ record_deletion | tojson }}'>
+  {% endif %}
+  <input type="hidden" name="config-groups-enabled"
+          value='{{ config.USERS_RESOURCES_GROUPS_ENABLED | tojson }}'>
+  <input type="hidden" name="records-resources-allow-empty-files"
+          value='{{ config.RECORDS_RESOURCES_ALLOW_EMPTY_FILES | tojson }}'>
+  <input type="hidden" name="deposits-use-uppy-ui"
+          value='{{ config.APP_RDM_DEPOSIT_NG_FILES_UI_ENABLED | tojson }}'>
+
   {%- if forms_config %}
-  <input type="hidden" name="deposits-config" value='{{forms_config | tojson }}'></input>
+    <input type="hidden" name="deposits-config"
+           value='{{ forms_config | tojson }}'>
   {%- endif %}
+
   {%- if permissions %}
-  <input id="deposits-record-permissions" type="hidden" name="deposits-record-permissions" value='{{permissions | tojson }}'></input>
+    <input id="deposits-record-permissions" type="hidden"
+           name="deposits-record-permissions"
+           value='{{ permissions | tojson }}'>
   {%- endif %}
+
+<input type="hidden" id="deposits-share-btn-require-link-expiration"
+        data-share-btn-require-link-expiration='{{ config.RDM_RECORDS_REQUIRE_SECRET_LINKS_EXPIRATION | tojson }}'>
+
   <div id="deposit-form"></div>
+
 {%- endblock page_body %}
 
 {%- block javascript %}
-    {{ super() }}
-    {{ webpack['invenio-app-rdm-deposit.js'] }}
+  {{ super() }}
+  {{ webpack['invenio-app-rdm-deposit.js'] }}
 {%- endblock %}
