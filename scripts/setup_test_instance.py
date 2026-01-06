@@ -18,18 +18,17 @@ community = {
 }
 
 
-#response = requests.post(
-#    host + "/api/communities",
-#    json=community,
-#    headers={"Authorization": f"Bearer {token}"},
-#)
-#if response.status_code != 201:
-#    print("Failed to create community")
-#    print(response.text)
-#    exit()
+response = requests.post(
+    host + "/api/communities",
+    json=community,
+    headers={"Authorization": f"Bearer {token}"},
+)
+if response.status_code != 201:
+    print("Failed to create community")
+    print(response.text)
+    exit()
 
-#community_id = response.json()["id"]
-community_id = '524939f5-3917-42f1-baaa-cf2e044e8204'
+community_id = response.json()["id"]
 
 print("Created community with id", community_id)
 
