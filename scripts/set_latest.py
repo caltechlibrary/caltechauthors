@@ -8,8 +8,8 @@ pids = ['e5gxk-vyg56']
 
 for pid in pids:
     record = service.record_cls.pid.resolve(pid)
-    print(record.versions)
-    record.versions._record.model.index = 2
+    print( record.versions.latest_id)
+    record.versions.state().latest_id = record.id
     record.commit()
     db.session.commit()
     service.indexer.index(record)
