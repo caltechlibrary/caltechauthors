@@ -17,6 +17,7 @@ uwsgi = ">=2.0"
 uwsgitop = ">=0.11"
 uwsgi-tools = ">=1.1.1"
 sqlalchemy = "*"
+setuptools = "<82"
 
 [requires]
 python_version = "3.12"
