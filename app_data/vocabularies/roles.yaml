@@ -256,3 +256,9 @@
   title:
     en: Committee Member
     de: Andere
+- id: issuing-body
+  props:
+    datacite: Other
+  title:
+    en: Issuing Body
+    de: Andere
