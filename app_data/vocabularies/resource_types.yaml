@@ -964,3 +964,14 @@
     en: Project
   tags:
     - linkable
+- id: instrument
+  icon: tatchometer
+  props:
+    datacite_general: Instrument
+    datacite_type: ""
+    subtype: ""
+    type: instrument
+  title:
+    en: Instrument
+  tags:
+    - linkable
