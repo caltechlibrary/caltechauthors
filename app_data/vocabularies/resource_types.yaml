@@ -495,6 +495,24 @@
   tags:
     - depositable
     - linkable
+- id: publication-newspaper
+  icon: file alternate
+  props:
+    csl: collection
+    datacite_general: Text
+    datacite_type: Newspaper
+    openaire_resourceType: "0020"
+    openaire_type: publication
+    eurepo: info:eu-repo/semantics/other
+    schema.org: https://schema.org/CreativeWork
+    subtype: publication-newspaper
+    type: publication
+  title:
+    en: Newspaper
+    de: Sonstige
+  tags:
+    - depositable
+    - linkable
 - id: publication-erratum
   icon: file alternate
   props:
