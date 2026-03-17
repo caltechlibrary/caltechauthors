@@ -965,7 +965,7 @@
   tags:
     - linkable
 - id: instrument
-  icon: tatchometer
+  icon: wrench
   props:
     datacite_general: Instrument
     datacite_type: ""
