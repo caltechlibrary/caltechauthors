@@ -14,7 +14,8 @@ import _isEmpty from "lodash/isEmpty";
 
 const SearchHelpLinks = () => {
   return (
-    <List> <List.Item> <a href="https://caltechlibrary.github.io/irdm-queue-portal/">{i18next.t("Queue View")}</a> </List.Item> </List>
+    <List> <List.Item> <a href="https://caltechlibrary.github.io/irdm-queue-portal/">{i18next.t("Queue View")}</a> </List.Item> 
+	  <List.Item> <a href="https://apps.library.caltech.edu/cold/rdm_review_queue.html?q_name=review_queue_by_name&q=*">{i18next.t("Queue Search (COLD)")}</a> </List.Item> </List>
   )
 }
 
