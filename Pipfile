@@ -10,6 +10,8 @@ check-manifest = ">=0.25"
 invenio-app-rdm = {git = "https://github.com/caltechlibrary/invenio-app-rdm.git", ref = "v13.1.0.caltechauthors.b2", extras = ["opensearch2", "s3"]}
 idutils = {git = "https://github.com/caltechlibrary/idutils.git", ref = "authors"}
 invenio-s3 = {git = "https://github.com/caltechlibrary/invenio-s3.git", ref = "maint-v3.x"}
+invenio-rdm-records = {git = "https://github.com/caltechlibrary/invenio-rdm-records.git", ref = "maint-20.x"}
+invenio-vocabularies = {git = "https://github.com/caltechlibrary/invenio-vocabularies.git", ref = "maint-9.0.x"}
 invenio-logging = {extras = ["sentry"]}
 caltechauthors = {editable = true, path="./site"}
 python-dotenv = "*"
