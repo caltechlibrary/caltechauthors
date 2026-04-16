@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "1163dad3a7edf173796ddf396dd2cfa6620ef37c9a465022584f2c151e5133af"
+            "sha256": "7c91525a090dc8880696e1b57bdc18818d233410e1799d7a23fe264be8692517"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1593,7 +1593,7 @@
         "invenio-rdm-records": {
             "git": "https://github.com/caltechlibrary/invenio-rdm-records.git",
             "markers": "python_version >= '3.7'",
-            "ref": "541ca13e88ee1ddb60948f68bffc420c88d64020"
+            "ref": "57a24bd5319e0e541704096bb6a93c3d924df5d4"
         },
         "invenio-records": {
             "hashes": [
@@ -1723,12 +1723,9 @@
             "version": "==9.0.5"
         },
         "invenio-vocabularies": {
-            "hashes": [
-                "sha256:3d7d3789dbeda1073173d2e51278db4c7fb6aacfcaafe10a2aa2eca64e2237a6",
-                "sha256:e6b8a5bb546e1bbbed79b12d51c408519f8560e7047195886aab057744bb1d60"
-            ],
+            "git": "https://github.com/caltechlibrary/invenio-vocabularies.git",
             "markers": "python_version >= '3.7'",
-            "version": "==9.0.0"
+            "ref": "14028005c7b8b6c8e2222c7ea64df539f1f369cb"
         },
         "invenio-webhooks": {
             "hashes": [
@@ -2098,11 +2095,11 @@
         },
         "mako": {
             "hashes": [
-                "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28",
-                "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59"
+                "sha256:071eb4ab4c5010443152255d77db7faa6ce5916f35226eb02dc34479b6858069",
+                "sha256:e372c6e333cf004aa736a15f425087ec977e1fcbd2966aae7f17c8dc1da27a77"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==1.3.10"
+            "version": "==1.3.11"
         },
         "markupsafe": {
             "hashes": [
@@ -2742,11 +2739,11 @@
         },
         "packaging": {
             "hashes": [
-                "sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4",
-                "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529"
+                "sha256:5d9c0669c6285e491e0ced2eee587eaf67b670d94a19e94e3984a481aba6802f",
+                "sha256:f042152b681c4bfac5cae2742a55e103d27ab2ec0f3d88037136b6bfe7c9c5de"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==26.0"
+            "version": "==26.1"
         },
         "pandocfilters": {
             "hashes": [
@@ -4680,11 +4677,11 @@
         },
         "packaging": {
             "hashes": [
-                "sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4",
-                "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529"
+                "sha256:5d9c0669c6285e491e0ced2eee587eaf67b670d94a19e94e3984a481aba6802f",
+                "sha256:f042152b681c4bfac5cae2742a55e103d27ab2ec0f3d88037136b6bfe7c9c5de"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==26.0"
+            "version": "==26.1"
         },
         "pyproject-hooks": {
             "hashes": [
