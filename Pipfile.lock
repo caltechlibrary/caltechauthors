@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7c91525a090dc8880696e1b57bdc18818d233410e1799d7a23fe264be8692517"
+            "sha256": "5faeaede3a83215be3d13371ae96af76a2ff4204bd137caeb3a4047bb5bc89b5"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1591,9 +1591,12 @@
             "version": "==1.0.2"
         },
         "invenio-rdm-records": {
-            "git": "https://github.com/caltechlibrary/invenio-rdm-records.git",
+            "hashes": [
+                "sha256:bbef0c43b7b958e2dd664a76cd55c8fd36acf7b4f7fc8e974257c326b8a7c9f8",
+                "sha256:e8ff18c77578c45e88b6a57fe9bfd6da034e813e59910e9b06f8b2eea4195e41"
+            ],
             "markers": "python_version >= '3.7'",
-            "ref": "57a24bd5319e0e541704096bb6a93c3d924df5d4"
+            "version": "==20.3.0"
         },
         "invenio-records": {
             "hashes": [
@@ -1723,9 +1726,12 @@
             "version": "==9.0.5"
         },
         "invenio-vocabularies": {
-            "git": "https://github.com/caltechlibrary/invenio-vocabularies.git",
+            "hashes": [
+                "sha256:4b995e31312f88bddd7fb550f8f060a087d84377e7e167043de5be22ed358ce2",
+                "sha256:55442c2a773930b0ccf8e728d0bb4b49a62bd082f5952884900c81d80ba5d8d5"
+            ],
             "markers": "python_version >= '3.7'",
-            "ref": "14028005c7b8b6c8e2222c7ea64df539f1f369cb"
+            "version": "==9.0.1"
         },
         "invenio-webhooks": {
             "hashes": [
