@@ -1,10 +1,9 @@
-
 include redirect-map.conf;
 
 server {
-  
-  server_name authors.caltechlibrary.dev
- 
+
+  server_name authors.library.caltech.edu
+
   add_header Strict-Transport-Security "max-age=15768000"; # 6 months
 
   # Request ID tracing (allows end-to-end tracking of requests for better
@@ -25,11 +24,12 @@ server {
     include uwsgi_params;
     uwsgi_buffering off;
     uwsgi_request_buffering off;
-    uwsgi_param Host $host;
-    uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
-    uwsgi_param X-Forwarded-Proto $scheme;
+    chunked_transfer_encoding off;
+    uwsgi_param HTTP_HOST $host;
+    uwsgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+    uwsgi_param HTTP_X_FORWARDED_PROTO $scheme;
     # Pass request id to the ui server
-    uwsgi_param X-Request-ID $request_id;
+    uwsgi_param HTTP_X_REQUEST_ID $request_id;
     # X-Session-ID / X-User-ID is read by nginx and included in the logs,
     # however we don't want to expose them to clients so we are hiding them.
     uwsgi_hide_header X-Session-ID;
@@ -44,11 +44,11 @@ server {
     uwsgi_buffering off;
     uwsgi_request_buffering off;
     chunked_transfer_encoding off;
-    uwsgi_param Host $host;
-    uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
-    uwsgi_param X-Forwarded-Proto $scheme;
+    uwsgi_param HTTP_HOST $host;
+    uwsgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+    uwsgi_param HTTP_X_FORWARDED_PROTO $scheme;
     # Pass request id to the api server
-    uwsgi_param X-Request-ID $request_id;
+    uwsgi_param HTTP_X_REQUEST_ID $request_id;
     # X-Session-ID / X-User-ID is read by nginx and included in the logs,
     # however we don't want to expose them to clients so we are hiding them.
     uwsgi_hide_header X-Session-ID;
@@ -60,18 +60,18 @@ server {
   # Another location is defined in order to allow large file uploads in the files
   # API without exposing the other parts of the application to receive huge
   # request bodies.
-  location ~ /api/records/.+/draft/files/.+/content(/[0-9]+)?/?$ {
+  location ~ /api/records/.+/draft/files/.+/content {
     gzip off;
     uwsgi_pass 127.0.0.1:5001;
     include uwsgi_params;
     uwsgi_buffering off;
-    uwsgi_request_buffering off;
     chunked_transfer_encoding off;
-    uwsgi_param Host $host;
-    uwsgi_param X-Forwarded-For $proxy_add_x_forwarded_for;
-    uwsgi_param X-Forwarded-Proto $scheme;
+    uwsgi_request_buffering off;
+    uwsgi_param HTTP_HOST $host;
+    uwsgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+    uwsgi_param HTTP_X_FORWARDED_PROTO $scheme;
     # Pass request id to api server
-    uwsgi_param X-Request-ID $request_id;
+    uwsgi_param HTTP_X_REQUEST_ID $request_id;
     # X-Session-ID / X-User-ID is read by nginx and included in the logs,
     # however we don't want to expose them to clients so we are hiding them.
     uwsgi_hide_header X-Session-ID;
@@ -80,26 +80,38 @@ server {
     client_max_body_size 500G;
   }
   # Static content is served directly by nginx and not the application server.
-  #location /static {
-  #  alias /opt/invenio/var/instance/static;
+  # location /static {
+  #  alias /home/tmorrell/.local/share/virtualenvs/caltechauthors-irdMlMEM/var/instance/static;
   #  autoindex off;
-  #} 
+  #}
   #Redirect old urls from redirect-map
   if ( $redirect_uri ) {
         return 301 $redirect_uri;
     }
 
+
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/authors.library.caltech.edu/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/authors.library.caltech.edu/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+
 }
 
+
+
 server {
-    if ($host = authors.caltechlibrary.dev) {
+    if ($host = authors.library.caltech.edu) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
 
-  
-  server_name authors.caltechlibrary.dev
- 
+
+  server_name authors.library.caltech.edu
+
   add_header Strict-Transport-Security "max-age=15768000";
     listen 80;
     return 404; # managed by Certbot
