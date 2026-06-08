@@ -80,10 +80,10 @@ server {
     client_max_body_size 500G;
   }
   # Static content is served directly by nginx and not the application server.
-  # location /static {
-  #  alias /home/tmorrell/.local/share/virtualenvs/caltechauthors-irdMlMEM/var/instance/static;
-  #  autoindex off;
-  #}
+   location /static {
+    alias /home/tmorrell/.local/share/virtualenvs/caltechauthors-irdMlMEM/var/instance/static;
+    autoindex off;
+  }
   #Redirect old urls from redirect-map
   if ( $redirect_uri ) {
         return 301 $redirect_uri;
