@@ -57,8 +57,19 @@ With `python_package_manager = uv` in `.invenio`, `invenio-cli install` calls
 ### 2d — Verify the install
 
 - [ ] `invenio-cli install` completes without error
-- [ ] `.venv/` is created inside the repo (not in home directory)
-- [ ] `uv run invenio --version` works
+- [ ] `.venv/` exists inside the repo root (not in home directory)
+- [ ] `.invenio.private` was created (invenio-cli stores the resolved instance path here)
+- [ ] `uv run invenio --version` prints the Invenio version
+- [ ] `uv run invenio-cli --version` prints 1.11.0 (or the installed version)
+- [ ] `cat .invenio.private` shows `instance_path` pointing to `.venv/var/instance/`
+- [ ] `ls .venv/var/instance/invenio.cfg` is a symlink to the repo root's `invenio.cfg`
+- [ ] `ls .venv/var/instance/assets/less/theme.config` exists (assets copied/linked)
+
+> **Note on `.venv` timestamps:** `uv sync` updates an existing virtualenv in
+> place rather than recreating it. If `.venv/` already exists from a previous
+> install (e.g. earlier work on another branch), the directory timestamp will
+> reflect its original creation date — this is expected and not a problem.
+
 - [ ] Commit: *"Replace Pipfile with pyproject.toml for uv"*
 
 ---
