@@ -130,3 +130,6 @@ dependency group for Linux production servers.
 | Port 5000 in use on macOS | macOS AirPlay Receiver also binds 5000; disable in System Settings → AirDrop & Handoff |
 | OpenSearch index prefix mismatch | Indices must be created AFTER `invenio.cfg` loads (`SEARCH_INDEX_PREFIX = "caltechauthors-"`) |
 | Bogus self-referential symlinks in `assets/` | Caused by running link script before `.venv/var/instance/assets/` exists; delete `assets/less/site/site` and `assets/templates/templates` |
+| Celery SIGSEGV on macOS ARM | Default `prefork` pool forks child processes; C extensions (lxml, psycopg2) are not fork-safe on Apple Silicon. Use `--pool=solo` for local dev. |
+| `rdm-records fixtures` completes but vocab data never appears | Fixtures only enqueue Celery tasks — data is written by the worker. Start Celery **before** running fixtures, or drain the queue afterward. |
+| `caltech_groups.yaml` missing from branch | CaltechAUTHORS-specific vocabulary file; required by `app_data/vocabularies.yaml`. Restore from git history if missing. |

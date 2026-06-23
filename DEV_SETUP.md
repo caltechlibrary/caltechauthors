@@ -106,12 +106,22 @@ uv run invenio files location create --default local-storage \
     "$(pwd)/.venv/var/instance/data"
 uv run invenio index init
 uv run invenio roles create admin
-uv run invenio rdm-records fixtures
 ```
 
 > `roles create admin` must run before `rdm-records fixtures`. The fixture
 > assigns a user to the `admin` role; if the role doesn't exist first,
 > SQLAlchemy throws a `FlushError`.
+
+Then **start Celery before running fixtures** (fixtures enqueue async tasks):
+
+```bash
+# Terminal 2 — start Celery first (see below), then in Terminal 1:
+uv run invenio rdm-records fixtures
+```
+
+> **macOS ARM note:** Celery workers crash with SIGSEGV when using the default
+> `prefork` pool on Apple Silicon because C extensions (lxml, psycopg2) are not
+> fork-safe. Use `--pool=solo` for local development (see Running the app).
 
 ### 7 — Create a local admin user
 
@@ -138,8 +148,13 @@ uv run gunicorn -c gunicorn.conf.py 'invenio_app.wsgi:application'
 
 **Terminal 2 — Celery worker:**
 ```bash
-uv run celery -A invenio_app.celery worker --loglevel=info
+uv run celery -A invenio_app.celery worker --loglevel=info --pool=solo
 ```
+
+> `--pool=solo` is required on macOS ARM (Apple Silicon). The default `prefork`
+> pool forks child processes, which causes SIGSEGV crashes with C extensions
+> (lxml, psycopg2) that are not fork-safe on macOS. `--pool=solo` runs tasks
+> in the worker process itself — single-threaded, fine for development.
 
 **Terminal 3 — Celery beat scheduler (optional):**
 ```bash
