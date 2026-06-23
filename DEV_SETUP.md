@@ -70,6 +70,11 @@ INVENIO_SEARCH_HOSTS=['localhost:9200']
 
 # Disable HTTPS redirect — gunicorn serves plain HTTP locally
 INVENIO_FORCE_HTTPS=false
+
+# Prevent calls to production — override invenio.cfg production URLs
+INVENIO_SITE_UI_URL=http://127.0.0.1:5000
+INVENIO_SITE_API_URL=http://127.0.0.1:5000/api
+INVENIO_DATACITE_ENABLED=false
 ```
 
 ### 4 — Start Docker backing services
@@ -102,6 +107,7 @@ Run these only on a **fresh database** (first time, or after `db destroy`):
 
 ```bash
 uv run invenio db create
+mkdir -p "$(pwd)/.venv/var/instance/data"
 uv run invenio files location create --default local-storage \
     "$(pwd)/.venv/var/instance/data"
 uv run invenio index init

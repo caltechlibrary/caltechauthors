@@ -108,12 +108,15 @@ dependency group for Linux production servers.
 
 ### 3e — Verify
 
-- [ ] `invenio-cli install` completes (assets built, symlinks in place)
-- [ ] `uv sync --group dev` adds gunicorn
-- [ ] Docker services start: `docker compose -f docker-services.yml up -d cache db mq search`
-- [ ] DB and indices initialised (see DEV_SETUP.md §6–7)
-- [ ] `uv run gunicorn -c gunicorn.conf.py 'invenio_app.wsgi:application'` serves HTTP 200
-- [ ] Login works at http://127.0.0.1:5000
+- [x] `invenio-cli install` completes (assets built, symlinks in place)
+- [x] `uv sync --group dev` adds gunicorn
+- [x] Docker services start: `docker compose -f docker-services.yml up -d cache db mq search`
+- [x] DB and indices initialised (see DEV_SETUP.md §6–7)
+- [x] `uv run gunicorn -c gunicorn.conf.py 'invenio_app.wsgi:application'` serves HTTP 200
+- [x] Login works at http://127.0.0.1:5000
+- [x] Vocabulary dropdowns populate in the deposit form
+- [x] File upload saves to local filesystem storage
+- [x] Draft save succeeds and record appears in review queue
 - [ ] Commit: *"Add gunicorn for local dev; uWSGI retained for production"*
 
 ---
@@ -133,5 +136,6 @@ dependency group for Linux production servers.
 | Celery SIGSEGV on macOS ARM | Default `prefork` pool forks child processes; C extensions (lxml, psycopg2) are not fork-safe on Apple Silicon. Use `--pool=solo` for local dev. |
 | Vocabulary/subject/user records not in OpenSearch | These use a separate invenio-indexer RabbitMQ queue (exchange `indexer`), not Celery tasks. Run `uv run invenio index run` after bulk imports to drain the queue into OpenSearch. Do NOT add these to Celery's `-Q` flag. |
 | `rdm-records fixtures` skips data on second run | `PrioritizedVocabulariesFixtures` primes ignore-list from existing DB types; re-run with `rdm-records add-to-fixture <type>` for each type. |
+| Deposit form blank (React doesn't render) | `session_cookie_secure: True` marks the cookie `Secure`; browser won't send it over HTTP. Set `"session_cookie_secure": False` and `"strict_transport_security": False` in `APP_DEFAULT_SECURE_HEADERS` for local dev. |
 | `rdm-records fixtures` completes but vocab data never appears | Fixtures only enqueue Celery tasks — data is written by the worker. Start Celery **before** running fixtures, or drain the queue afterward. |
 | `caltech_groups.yaml` missing from branch | CaltechAUTHORS-specific vocabulary file; required by `app_data/vocabularies.yaml`. Restore from git history if missing. |
