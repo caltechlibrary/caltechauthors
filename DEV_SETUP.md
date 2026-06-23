@@ -156,7 +156,18 @@ uv run celery -A invenio_app.celery worker --loglevel=info --pool=solo
 > (lxml, psycopg2) that are not fork-safe on macOS. `--pool=solo` runs tasks
 > in the worker process itself — single-threaded, fine for development.
 
-**Terminal 3 — Celery beat scheduler (optional):**
+**Terminal 3 — OpenSearch indexer (run once after fixtures; optional in steady state):**
+```bash
+uv run invenio index run
+```
+
+> This drains the invenio-indexer RabbitMQ queues (`vocabularies`, `subjects`,
+> `users`, `groups` under the `indexer` exchange) and bulk-sends records to
+> OpenSearch. These are **not** Celery task queues — do NOT add them to the
+> Celery worker's `-Q` flag. Run `index run` once after `rdm-records fixtures`
+> and after any bulk import, or leave it running in a loop for real-time indexing.
+
+**Terminal 4 — Celery beat scheduler (optional):**
 ```bash
 uv run celery -A invenio_app.celery beat --loglevel=info
 ```

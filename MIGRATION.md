@@ -131,5 +131,7 @@ dependency group for Linux production servers.
 | OpenSearch index prefix mismatch | Indices must be created AFTER `invenio.cfg` loads (`SEARCH_INDEX_PREFIX = "caltechauthors-"`) |
 | Bogus self-referential symlinks in `assets/` | Caused by running link script before `.venv/var/instance/assets/` exists; delete `assets/less/site/site` and `assets/templates/templates` |
 | Celery SIGSEGV on macOS ARM | Default `prefork` pool forks child processes; C extensions (lxml, psycopg2) are not fork-safe on Apple Silicon. Use `--pool=solo` for local dev. |
+| Vocabulary/subject/user records not in OpenSearch | These use a separate invenio-indexer RabbitMQ queue (exchange `indexer`), not Celery tasks. Run `uv run invenio index run` after bulk imports to drain the queue into OpenSearch. Do NOT add these to Celery's `-Q` flag. |
+| `rdm-records fixtures` skips data on second run | `PrioritizedVocabulariesFixtures` primes ignore-list from existing DB types; re-run with `rdm-records add-to-fixture <type>` for each type. |
 | `rdm-records fixtures` completes but vocab data never appears | Fixtures only enqueue Celery tasks — data is written by the worker. Start Celery **before** running fixtures, or drain the queue afterward. |
 | `caltech_groups.yaml` missing from branch | CaltechAUTHORS-specific vocabulary file; required by `app_data/vocabularies.yaml`. Restore from git history if missing. |
