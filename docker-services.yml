@@ -63,7 +63,7 @@ services:
     environment:
       # settings only for development. DO NOT use in production!
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx512m"
       - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=guekxe3mvqieke1!%&ieIADE"
       - "DISABLE_INSTALL_DEMO_CONFIG=true"
       - "DISABLE_SECURITY_PLUGIN=true"
@@ -75,7 +75,7 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    mem_limit: 16g
+    mem_limit: 4g
     ports:
       - "9200:9200"
       - "9600:9600"
