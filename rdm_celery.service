@@ -8,7 +8,7 @@ StandardOutput=kmsg
 StandardError=kmsg
 WorkingDirectory=/Sites/caltechauthors
 EnvironmentFile=/Sites/caltechauthors/.env
-ExecStart=/usr/local/bin/pipenv run celery --app invenio_app.celery worker --beat --events --loglevel INFO
+ExecStart=/home/tmorrell/.local/bin/pipenv run celery --app invenio_app.celery worker --beat --events --loglevel INFO
 
 [Install]
 WantedBy=multi-user.target
