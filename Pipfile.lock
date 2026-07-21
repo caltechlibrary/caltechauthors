@@ -642,11 +642,11 @@
         },
         "citeproc-py": {
             "hashes": [
-                "sha256:41e7247ae90fd185b2432e1484776507ac8542ddf491ceec1d9937b3a4c25843",
-                "sha256:9058b231603fdd71566c85cb5b9d30c507d0bbdbca833acfcdbd972d1030f889"
+                "sha256:19566fe56d6fb791818b32204b51c42243c2a4b60f9e6d312e9371bfeac7d381",
+                "sha256:3fcc51d70314abb316c41f5db773a44617a1bfe4fae1ed402b0683c6d26f7658"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==0.10.1"
+            "version": "==0.10.2"
         },
         "citeproc-py-styles": {
             "hashes": [
@@ -1568,11 +1568,11 @@
         },
         "invenio-i18n": {
             "hashes": [
-                "sha256:8153147f323dca7a17cd6ca9b045d1be26dc2d4310845a20200056ed360663b3",
-                "sha256:fa9abf2d5d51b468f8983a00c6d0afb2018ba41adcb97923f632c748637904c2"
+                "sha256:7a1914c865ea7580b261800f852713f33ea0e3b507a2d00fbee5983afde4ca2e",
+                "sha256:a34e65fab533ba578004461736bb039ed1aa576b747901e13e9b24cd5ba938ea"
             ],
             "markers": "python_version >= '3.9'",
-            "version": "==3.5.0"
+            "version": "==3.5.1"
         },
         "invenio-indexer": {
             "hashes": [
@@ -1619,11 +1619,11 @@
         },
         "invenio-notifications": {
             "hashes": [
-                "sha256:18214d89bed7cf1c1e2f90724cbff8f75945cf60afcea3f6086f0fbcb8f6215d",
-                "sha256:a5eba2ff9e1951d42852ab903814c639082a4bdcf49fcb968409324f605e4615"
+                "sha256:5902bcdf508ffe8c94173dfbce8b2f7653403d6f21cfab2120c85e4ea7e5854d",
+                "sha256:e10561c83f452a3786e0a18558a946b9f55f94652be215f8aa24360512bf4191"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==1.3.0"
+            "markers": "python_version >= '3.9'",
+            "version": "==1.3.1"
         },
         "invenio-oaiserver": {
             "hashes": [
@@ -1770,11 +1770,11 @@
         },
         "invenio-search-ui": {
             "hashes": [
-                "sha256:32ef97fd4850e1cdf0b070d499c4629b45c4976d7a44965fae2c5e5445ee850c",
-                "sha256:7a73ada5e9acaba4095409bab7b247724e17c1a615a6b729d4e151e6f9b05d9b"
+                "sha256:02483ebfbf5f3bcb92340fc43a4df5c9115cc7885255b27ccb14e42466d41d59",
+                "sha256:c8d9c371315666bf4e467928a9bfa759c4e736ef43d9d78b684c2ae1bbcbe105"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==4.2.1"
+            "markers": "python_version >= '3.9'",
+            "version": "==4.2.2"
         },
         "invenio-sitemap": {
             "hashes": [
@@ -1794,11 +1794,11 @@
         },
         "invenio-theme": {
             "hashes": [
-                "sha256:54682bd38cb2cfbecca33bd2cd4c602ed1e8e1c391b3c4df4bcd57782bb6fc5c",
-                "sha256:bfcb83e6889589b89015c107410a8db68f7a19a15c23025ae975beb983b8a6e3"
+                "sha256:53a3fac99a4521eabde74a9454a86bbdb62fa370e7a95ef05f9718c691cefc31",
+                "sha256:f9ff23304df89a4db863b79e1f32ac586bcc4feff1cdd9b04015f37c04b2561e"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==4.8.0"
+            "markers": "python_version >= '3.9'",
+            "version": "==4.8.1"
         },
         "invenio-userprofiles": {
             "hashes": [
@@ -3019,11 +3019,11 @@
         },
         "platformdirs": {
             "hashes": [
-                "sha256:0e4eff26be2d75293977f7cddc153fd9b8eaa7fb0c7b64ffe4076cb443117443",
-                "sha256:ceab4084426fe6319ce18e86deada8ab1b7487c7aee7040c55e277c9ae793695"
+                "sha256:0555d18370482847566ffabcaa53ad7c6c1c29f195989ae1ed634a05f76ea1e0",
+                "sha256:360ccded2b7fce0af0ff80cc8f5942a1c5d99b0e856033acb030bfc634709e74"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==4.10.1"
+            "version": "==4.11.0"
         },
         "pluggy": {
             "hashes": [
