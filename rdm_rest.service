@@ -1,5 +1,5 @@
 [Unit]
-Description=Launch InvenioRDM Web Interface
+Description=Launch InvenioRDM REST API (Granian)
 
 [Service]
 Type=simple
@@ -8,7 +8,9 @@ StandardOutput=kmsg
 StandardError=kmsg
 WorkingDirectory=/Sites/caltechauthors
 EnvironmentFile=/Sites/caltechauthors/.env
-ExecStart=/usr/local/bin/pipenv run uwsgi --logger syslog:inveniordm_rest uwsgi_rest.ini
+ExecStart=/usr/local/bin/uv run --no-sync granian --interface wsgi invenio_app.wsgi_rest:application --host 0.0.0.0 --port 5001 --workers 6 --blocking-threads 5
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

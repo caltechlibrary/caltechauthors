@@ -1,0 +1,573 @@
+#cloud-config
+# Bring-up machine for CaltechAUTHORS running under Granian instead of
+# uWSGI (repo `caltechauthors`, branch `granian`). Adapted from the
+# `granian-rdm-v14` research project's own cloud-init.yaml (that project
+# scaffolded a brand-new RDM v14 project from cookiecutter; this one
+# clones and deploys the real, already-existing caltechauthors repo, so
+# the scaffold-a-new-project step is replaced entirely -- see
+# setup_caltechauthors_granian.bash).
+#
+# Scope decisions (this repo, not carried over from granian-rdm-v14):
+#   - x86_64, not arm64/Graviton -- matches production's actual reserved
+#     x86_64 instance type. granian-rdm-v14 picked Graviton for wheel-
+#     availability reasons specific to free-threaded Python 3.14, which
+#     doesn't apply here (plain Python 3.12, no free-threading).
+#   - Python 3.12 (production's real pin, via this repo's own
+#     .python-version), not 3.14 -- no free-threading angle at all here.
+#   - Node 18, matching this repo's package.json (engines.node >=18) and
+#     what uv-gunicorn-dev's own DEV_SETUP.md already documents using.
+#   - invenio-app-rdm pinned to production's real
+#     v13.1.2.caltechauthors.2 (via this repo's own pyproject.toml/
+#     uv.lock, not a fresh `uv add` here) -- not RDM v14.
+#   - This repo's docker-services.yml already carries the OpenSearch
+#     path.repo + persistent-volume fix (production retrofitted
+#     2026-08-17; see rdm-opensearch-path-repo-retrofit.md) -- the
+#     landmine granian-rdm-v14's setup script had to defend against by
+#     patching a fresh scaffold's docker-services.yml doesn't exist here.
+#   - Granian worker/thread flags below (--workers 6 --blocking-threads 5)
+#     match production's current uWSGI tuning (processes=6, threads=5),
+#     ported 1:1 as an unverified starting point -- see rdm.service in
+#     this repo for the same flag choice and the same caveat.
+#   - SQL/OpenSearch data comes from a real production snapshot via
+#     clasm's Backup & Restore workflow, not invenio-cli's demo data --
+#     setup_caltechauthors_granian.bash deliberately skips
+#     `invenio-cli services setup` (which would create/migrate a demo
+#     schema clasm's restore would just immediately discard) and only
+#     starts the backing containers, leaving DB/index population to
+#     clasm's restore step.
+package_update: true
+package_upgrade: true
+fqdn: invenio-rdm14-granian.local
+packages:
+  - sshfs
+  - build-essential
+  - git
+  - lynx
+  - tmux
+  - curl
+  - rsync
+  - nginx
+  - imagemagick
+  - pkg-config
+  - libxml2-dev
+  - libxmlsec1-dev
+  - docker.io
+  - docker-compose-v2
+  - makepasswd
+  - shellcheck
+  - jq
+  - unzip # needed to install AWS CLI v2's official installer bundle --
+          # found missing 2026-08-18 setting up a clasm-launched
+          # restore-test instance (caltechdata-restore-test)
+groups:
+  - docker
+  - staff
+  - www-data
+runcmd:
+  - adduser ubuntu docker
+  - adduser ubuntu staff
+  - adduser ubuntu www-data
+  - /usr/local/bin/install_rdm_toolchain.bash
+snap:
+  commands:
+    - snap install --classic certbot
+write_files:
+  - content: |
+      #!/bin/bash
+      # Installs uv, a uv-managed Python 3.12, invenio-cli (via "uv tool
+      # install", not pip -- no PEP 668 externally-managed-environment
+      # dance needed), and Node 18 -- everything
+      # setup_caltechauthors_granian.bash needs. Run once at boot via
+      # runcmd; idempotent if rerun.
+      set -euo pipefail
+
+      # Installed as the ubuntu user (not root, which is what this script
+      # otherwise runs as via runcmd) so everything lands in
+      # /home/ubuntu/.local/bin, which is where
+      # setup_caltechauthors_granian.bash's PATH and the systemd units'
+      # ExecStart both expect to find it.
+      echo "Installing uv for the ubuntu user..."
+      sudo -u ubuntu -H bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+
+      echo "Installing Python 3.12 via uv..."
+      sudo -u ubuntu -H bash -c 'export PATH="$HOME/.local/bin:$PATH"; uv python install 3.12'
+
+      echo "Installing invenio-cli as a uv tool (isolated venv, own Python -- independent of any project's Python pin)..."
+      sudo -u ubuntu -H bash -c 'export PATH="$HOME/.local/bin:$PATH"; uv tool install "invenio-cli==1.11.0"'
+
+      echo "Installing nvm + Node 18 for the ubuntu user..."
+      # Node >=18 is this repo's own package.json requirement
+      # (engines.node) for RDM v13.1.2 -- not v14's stricter Node
+      # 22/24+ floor, which doesn't apply to this pin.
+      #
+      # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
+      # carried over as a precaution here too): git-cloning nvm directly
+      # (instead of running its official installer) skips the step that
+      # normally appends nvm's loader snippet to .bashrc. Only a shell
+      # that explicitly sources nvm.sh gets node/npm on PATH -- this
+      # script's own subshell does, via the export/source lines below,
+      # but any *later*, separate interactive SSH session would not, so
+      # append the same loader snippet to .bashrc for every future shell
+      # too.
+      sudo -u ubuntu -H bash -c '
+        set -euo pipefail
+        if [ ! -d "$HOME/.nvm" ]; then
+          git clone --depth 1 https://github.com/nvm-sh/nvm "$HOME/.nvm"
+        fi
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        nvm install 18
+        nvm alias default 18
+        echo "" >> "$HOME/.bashrc"
+        echo "export NVM_DIR=\"\$HOME/.nvm\"" >> "$HOME/.bashrc"
+        echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"" >> "$HOME/.bashrc"
+      '
+
+      echo "Setting vm.max_map_count for OpenSearch..."
+      cat <<EOT >/etc/sysctl.d/rdm_sysctl.conf
+      vm.max_map_count=262144
+      EOT
+      sysctl --system
+
+    path: /usr/local/bin/install_rdm_toolchain.bash
+    owner: 'root:root'
+    permissions: '0775'
+  - content: |
+      #!/bin/bash
+      # ExecStartPre readiness gate for the rdm/rdm_rest/rdm_celery systemd
+      # units (see ../cloud-init.yaml). A Docker container reporting "started"
+      # is not the same as the service inside it actually accepting
+      # connections -- that gap is the root cause identified in DESIGN.md's
+      # "Follow-on: operability hardening" for reboot brittleness (PLAN.md
+      # Step 7). This blocks until Postgres/Redis/RabbitMQ/OpenSearch on
+      # 127.0.0.1 all respond, or exits non-zero after a bounded timeout so
+      # systemd's Restart=on-failure retries the whole unit instead of the
+      # ExecStart racing ahead against services that aren't ready yet.
+      set -uo pipefail
+      TIMEOUT_SECONDS=180
+      INTERVAL_SECONDS=2
+      DEADLINE=$(($(date +%s) + TIMEOUT_SECONDS))
+
+      tcp_ready() {
+        local host="$1" port="$2"
+        (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null
+      }
+
+      http_ready() {
+        curl -fsS -o /dev/null --max-time 5 "$1"
+      }
+
+      wait_for() {
+        local description="$1"
+        shift
+        while ! "$@"; do
+          if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+            echo "Timed out after ${TIMEOUT_SECONDS}s waiting for ${description}" >&2
+            return 1
+          fi
+          sleep "$INTERVAL_SECONDS"
+        done
+        echo "${description} is ready"
+      }
+
+      wait_for "Postgres (127.0.0.1:5432)" tcp_ready 127.0.0.1 5432
+      wait_for "Redis/cache (127.0.0.1:6379)" tcp_ready 127.0.0.1 6379
+      wait_for "RabbitMQ (127.0.0.1:5672)" tcp_ready 127.0.0.1 5672
+      wait_for "OpenSearch (127.0.0.1:9200)" http_ready http://127.0.0.1:9200
+    path: /usr/local/bin/wait_for_rdm_services.bash
+    owner: 'root:root'
+    permissions: '0775'
+  - content: |
+      #!/bin/bash
+      # Step 7 acceptance script (see ../PLAN.md "Step 7 -- systemd reboot
+      # hardening"). Run this manually right after `sudo reboot` -- not just
+      # after a manual `systemctl start` sequence -- to confirm the instance
+      # actually comes back up unattended. Exit 0 = every check passed;
+      # nonzero = something is still broken.
+      #
+      # Deliberately standalone from wait_for_rdm_services.bash (the
+      # production readiness gate baked into the systemd units via
+      # ExecStartPre): this script is the outside observer confirming the gate
+      # actually worked, not part of the gate itself. Keep this in the repo as
+      # a standing regression check for any future edit to cloud-init.yaml's
+      # systemd unit section.
+      #
+      # USAGE: verify_rdm_boot.bash [INSTANCE_NAME]
+      set -uo pipefail
+      INSTANCE_NAME="${1:-caltechauthors}"
+      FAILURES=0
+
+      check() {
+        local description="$1"
+        shift
+        if "$@"; then
+          echo "OK   -- ${description}"
+        else
+          echo "FAIL -- ${description}"
+          FAILURES=$((FAILURES + 1))
+        fi
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      units_active() {
+        systemctl is-active --quiet docker rdm rdm_rest rdm_celery nginx
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      api_responds() {
+        local code
+        code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 https://localhost/api/records)"
+        [ "$code" = "200" ]
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      celery_responds() {
+        # Explicitly as ubuntu, regardless of which user runs this script --
+        # uv and the project venv live under /home/ubuntu, and running this
+        # as root (e.g. via `sudo`, or SSM's default execution user) silently
+        # can't find `uv` at all, which looks identical to celery being dead.
+        # Found live 2026-07-27: a manual ping as ubuntu succeeded instantly
+        # while this check kept failing, because it was never really running
+        # celery at all.
+        #
+        # Second bug found live the same day: piping straight into `grep -q`
+        # (which exits the instant it finds a match, closing the pipe early)
+        # sends SIGPIPE to the still-running celery process upstream -- with
+        # `set -o pipefail` active, THAT non-zero exit, not grep's successful
+        # match, became the pipeline's reported status. Capture the output via
+        # command substitution first (fully waits, no live pipe to the
+        # subprocess) and match against the captured string instead.
+        local output
+        output="$(sudo -u ubuntu -H bash -c "
+          cd '/Sites/${INSTANCE_NAME}' &&
+          export PATH=\"\$HOME/.local/bin:\$PATH\" &&
+          timeout 15 uv run --no-sync celery --app invenio_app.celery inspect ping
+        " 2>/dev/null)"
+        grep -q "pong" <<< "$output"
+      }
+
+      check "docker/rdm/rdm_rest/rdm_celery/nginx are all systemctl active" units_active
+      check "https://localhost/api/records responds 200" api_responds
+      check "celery worker responds to inspect ping" celery_responds
+
+      echo
+      if [ "$FAILURES" -eq 0 ]; then
+        echo "All checks passed."
+        exit 0
+      else
+        echo "${FAILURES} check(s) failed."
+        exit 1
+      fi
+    path: /usr/local/bin/verify_rdm_boot.bash
+    owner: 'root:root'
+    permissions: '0775'
+  - content: |
+      #!/bin/bash
+      # Deploys the real caltechauthors repo (not a cookiecutter scaffold --
+      # this repo already exists, with its own pinned pyproject.toml/
+      # uv.lock and its own committed systemd/nginx config) running under
+      # Granian on Python 3.12. Not run automatically by cloud-init -- ssh
+      # in after boot and run this manually so each step can be watched/
+      # debugged.
+      #
+      # USAGE: setup_caltechauthors_granian.bash [BRANCH] [REPO_URL]
+      set -euo pipefail
+      BRANCH="${1:-granian}"
+      REPO_URL="${2:-https://github.com/caltechlibrary/caltechauthors.git}"
+      INSTANCE_NAME="caltechauthors"
+
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+      nvm use 18
+      export PATH="$HOME/.local/bin:$PATH"
+
+      # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
+      # carried over as a precaution here too): invenio-assets'
+      # devDependencies pin @rspack/core <1.7.0 while @rspack/cli 2.1.5's
+      # own peer dependency wants ^2.0.0-0 -- an inconsistency in that
+      # package's own package.json, not anything specific to this
+      # project. npm (10.x, strict-by-default peer resolution) refuses to
+      # install at all otherwise. Setting this persists to ~/.npmrc, so
+      # it applies automatically to the npm install invenio-cli runs
+      # internally during "invenio-cli install".
+      echo "Configuring npm to tolerate invenio-assets' rspack peer-dependency conflict"
+      npm config set legacy-peer-deps true
+
+      sudo mkdir -p /Sites
+      sudo chown "$USER" /Sites
+      cd /Sites
+
+      echo "Cloning ${REPO_URL} (branch ${BRANCH}) into /Sites/${INSTANCE_NAME}"
+      git clone --branch "$BRANCH" "$REPO_URL" "$INSTANCE_NAME"
+      cd "/Sites/${INSTANCE_NAME}"
+
+      echo "Syncing dependencies via uv -- pyproject.toml/uv.lock already"
+      echo "pin invenio-app-rdm==v13.1.2.caltechauthors.2 and granian,"
+      echo "nothing to 'uv add' here unlike a fresh cookiecutter scaffold"
+      uv sync
+
+      echo "Building assets and translations"
+      invenio-cli install
+
+      echo "Creating OpenSearch host-mount dirs (docker-services.yml binds"
+      echo "/opt/rdm_opensearch_data_migrated and /opt/rdm_opensearch_backups"
+      echo "to uid 1000 inside the container -- these don't exist on a fresh"
+      echo "host and OpenSearch crash-loops with AccessDeniedException on"
+      echo "/usr/share/opensearch/data/nodes without them; found live on"
+      echo "2026-08-19, folded back here 2026-08-21)"
+      sudo mkdir -p /opt/rdm_opensearch_data_migrated /opt/rdm_opensearch_backups
+      sudo chown 1000:1000 /opt/rdm_opensearch_data_migrated /opt/rdm_opensearch_backups
+
+      echo "Starting backing services (Postgres/Redis/RabbitMQ/OpenSearch)"
+      echo "-- deliberately NOT running 'invenio-cli services setup': this"
+      echo "instance's SQL/OpenSearch data comes from a real production"
+      echo "snapshot via clasm's Backup & Restore workflow next, and"
+      echo "services setup's schema-init/demo-data step would just be"
+      echo "immediately discarded by that restore (confirmed by reading"
+      echo "clasm's own restore_sql.go: it does its own DROP DATABASE/"
+      echo "CREATE DATABASE/load directly against the running container)."
+      invenio-cli services start
+
+      echo "Generating self-signed TLS cert (internal test instance behind"
+      echo "a restricted security group, not a public endpoint -- a real"
+      echo "cert isn't needed, just one nginx can load)"
+      if [ ! -f /etc/ssl/certs/nginx-selfsigned.crt ]; then
+        sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+          -keyout /etc/ssl/private/nginx-selfsigned.key \
+          -out /etc/ssl/certs/nginx-selfsigned.crt \
+          -subj "/CN=${INSTANCE_NAME}.local"
+      fi
+      if [ ! -f /etc/nginx/dhparam.pem ]; then
+        sudo openssl dhparam -out /etc/nginx/dhparam.pem 2048
+      fi
+      sudo mkdir -p /etc/nginx/snippets
+      cat <<EOT | sudo tee /etc/nginx/snippets/self-signed.conf >/dev/null
+      ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+      ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+      EOT
+      cat <<EOT | sudo tee /etc/nginx/snippets/ssl-params.conf >/dev/null
+      ssl_protocols TLSv1.2 TLSv1.3;
+      ssl_prefer_server_ciphers on;
+      ssl_dhparam /etc/nginx/dhparam.pem;
+      ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+      ssl_ecdh_curve secp384r1;
+      ssl_session_cache shared:SSL:10m;
+      ssl_session_tickets off;
+      ssl_stapling off;
+      ssl_stapling_verify off;
+      resolver 127.0.0.53 valid=300s;
+      resolver_timeout 5s;
+      add_header X-Frame-Options DENY;
+      add_header X-Content-Type-Options nosniff;
+      EOT
+
+      echo "Writing nginx site config"
+      # Real bug found via live testing 2026-07-27 (Step 7 verification):
+      # the proxy "location" blocks used to live in a server block with
+      # NO "listen" directive of its own -- nginx defaults that to
+      # "listen 80", which then collided with the *separate*, explicit
+      # "listen 80" block below it (both declaring "server_name _;" on
+      # the same socket), logged as "conflicting server name \"_\" on
+      # 0.0.0.0:80, ignored". Whichever block nginx picked, the TLS
+      # (443, ssl) block had NO location blocks of its own at all -- so
+      # every HTTPS request (the actual intended access path, and what
+      # verify_rdm_boot.bash checks) fell through to nginx's own compiled-
+      # in default root ("/usr/share/nginx/html"), a bare 404, not our
+      # app. Fixed by collapsing to two server blocks: plain HTTP (80)
+      # that redirects to HTTPS, and the actual TLS (443) block carrying
+      # every "location" -- this is the only block that now needs them.
+      cat <<EOT >"${INSTANCE_NAME}_nginx.conf"
+
+      server {
+        server_name _;
+        listen 80;
+        listen [::]:80;
+        return 301 https://\$host\$request_uri;
+      }
+
+      server {
+        server_name _;
+        include snippets/self-signed.conf;
+        include snippets/ssl-params.conf;
+        add_header Strict-Transport-Security "max-age=15768000";
+        add_header X-Request-ID \$request_id;
+        listen 443 ssl;
+        listen [::]:443 ssl;
+
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_http_version 1.1;
+
+        location / {
+          proxy_pass http://127.0.0.1:5000;
+          proxy_set_header Host \$host;
+          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto \$scheme;
+          proxy_set_header X-Request-ID \$request_id;
+          proxy_hide_header X-Session-ID;
+          proxy_hide_header X-User-ID;
+          client_max_body_size 100m;
+        }
+        # Real bug found via live testing 2026-07-27 (Step 7 verification):
+        # every /api/* request 404'd, including paths with confirmed
+        # indexed data (e.g. /api/vocabularies/languages) -- ruled out
+        # both "no demo data" and "OpenSearch still indexing" (a 200
+        # with an empty result, or a 500, would look different; this was
+        # a bare Werkzeug "no URL rule" 404). Root cause: confirmed live
+        # that invenio_app.wsgi_rest:application (port 5001, the REST-
+        # only Granian process) mounts every API blueprint at the root
+        # ("/records" returns 200 with real data), NOT under "/api" --
+        # that prefix is nginx's job to strip before proxying, which
+        # "proxy_pass http://127.0.0.1:5001;" (no trailing slash, so
+        # nginx forwards the full unmodified URI) never did. A trailing
+        # slash on proxy_pass makes nginx replace the matched location
+        # prefix with it instead of preserving the full path.
+        location /api {
+          proxy_pass http://127.0.0.1:5001/;
+          proxy_set_header Host \$host;
+          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto \$scheme;
+          proxy_set_header X-Request-ID \$request_id;
+          proxy_hide_header X-Session-ID;
+          proxy_hide_header X-User-ID;
+          client_max_body_size 100m;
+        }
+        # Regex locations can't use proxy_pass's trailing-slash prefix-
+        # strip trick -- the /api/ prefix must be dropped explicitly via
+        # a capture group instead. Optional trailing /<part-number> and
+        # trailing slash match this repo's own nginx-sites-enabled-default
+        # (multipart file-content requests carry a numeric part suffix).
+        location ~ ^/api/(records/.+/draft/files/.+/content(?:/[0-9]+)?/?)$ {
+          gzip off;
+          proxy_pass http://127.0.0.1:5001/\$1;
+          proxy_set_header Host \$host;
+          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto \$scheme;
+          proxy_set_header X-Request-ID \$request_id;
+          proxy_hide_header X-Session-ID;
+          proxy_hide_header X-User-ID;
+          client_max_body_size 500G;
+        }
+        # Static content served directly by nginx, matching this repo's
+        # own nginx-sites-enabled-default (path reflects uv's venv layout,
+        # not the old Pipenv virtualenvs path).
+        location /static {
+          alias /Sites/${INSTANCE_NAME}/.venv/var/instance/static;
+          autoindex off;
+        }
+      }
+
+      EOT
+      sudo mv -v "${INSTANCE_NAME}_nginx.conf" "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
+      sudo chown root:root "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
+      sudo chmod 664 "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
+      sudo ln -sf "/etc/nginx/sites-available/${INSTANCE_NAME}.conf" "/etc/nginx/sites-enabled/${INSTANCE_NAME}.conf"
+      sudo rm -f "/etc/nginx/sites-enabled/default"
+      sudo systemctl restart nginx
+
+      echo "Writing .env"
+      # invenio.cfg has NO Redis/RabbitMQ/OpenSearch settings at all (only
+      # SQLALCHEMY_DATABASE_URI happens to default to localhost) -- those
+      # come from invenio-app-rdm's own upstream defaults, which assume
+      # Docker-network hostnames (cache/mq/search), since the stock
+      # cookiecutter template assumes the app itself also runs inside
+      # docker-compose.full.yml. This repo's app runs bare-metal (matching
+      # production's own topology), with only the backing services
+      # dockerized (docker-services.yml) and port-mapped to localhost --
+      # same situation as this repo's own (gitignored) local dev .env,
+      # whose comment says exactly this ("localhost because we're running
+      # outside Docker"). Redis DB-index split (0=cache/1=session/
+      # 2=celery-result/3=ratelimit/4=communities-identities-cache) matches
+      # cookiecutter-invenio-rdm's own conventional default split; RabbitMQ
+      # has no custom auth in docker-services.yml, so guest/guest applies.
+      INVENIO_SECRET_KEY="$(makepasswd -char 64)"
+      cat <<EOT >.env
+      INVENIO_SECRET_KEY=${INVENIO_SECRET_KEY}
+      INVENIO_LOGGING_CONSOLE_LEVEL=INFO
+      FLASK_ENV=production
+      INVENIO_SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://caltechauthors:caltechauthors@localhost/caltechauthors
+      INVENIO_CACHE_TYPE=redis
+      INVENIO_CACHE_REDIS_URL=redis://localhost:6379/0
+      INVENIO_ACCOUNTS_SESSION_REDIS_URL=redis://localhost:6379/1
+      INVENIO_CELERY_RESULT_BACKEND=redis://localhost:6379/2
+      INVENIO_RATELIMIT_STORAGE_URL=redis://localhost:6379/3
+      INVENIO_COMMUNITIES_IDENTITIES_CACHE_REDIS_URL=redis://localhost:6379/4
+      INVENIO_BROKER_URL=amqp://guest:guest@localhost:5672/
+      INVENIO_CELERY_BROKER_URL=amqp://guest:guest@localhost:5672/
+      INVENIO_SEARCH_HOSTS=["localhost:9200"]
+      INVENIO_DATACITE_ENABLED=false
+      EOT
+      chmod 600 .env
+      echo "NOTE: S3/production file-storage endpoint config for restored"
+      echo "file objects is a separate decision, deliberately left unset"
+      echo "here -- add INVENIO_S3_* / FILES_REST_STORAGE_FACTORY overrides"
+      echo "before restoring records that reference real S3 objects."
+
+      echo "Installing this repo's own committed systemd units (rdm.service,"
+      echo "rdm_rest.service, rdm_celery.service) -- adjusted only for this"
+      echo "instance's actual user/uv path (ubuntu / /home/ubuntu/.local/bin,"
+      echo "the clasm/AWS Ubuntu convention), since production's tmorrell/"
+      echo "/usr/local/bin/uv is unverified for this host. Also adds the"
+      echo "ExecStartPre readiness gate this repo's own units don't carry --"
+      echo "production's Postgres/OpenSearch don't race Docker startup the"
+      echo "way this single-node docker-compose'd test instance does."
+      for unit in rdm.service rdm_rest.service rdm_celery.service; do
+        sed -e 's/^User=tmorrell/User=ubuntu/' \
+            -e 's#/usr/local/bin/uv#/home/ubuntu/.local/bin/uv#' \
+            -e '/^\[Service\]/a ExecStartPre=/usr/local/bin/wait_for_rdm_services.bash' \
+            "$unit" | sudo tee "/etc/systemd/system/$unit" >/dev/null
+      done
+      sudo chown root:root /etc/systemd/system/rdm.service /etc/systemd/system/rdm_rest.service /etc/systemd/system/rdm_celery.service
+      sudo chmod 664 /etc/systemd/system/rdm.service /etc/systemd/system/rdm_rest.service /etc/systemd/system/rdm_celery.service
+
+      echo "Writing rdm.target (single start/stop/enable point for"
+      echo "rdm+rdm_rest+rdm_celery+nginx together) and an nginx drop-in"
+      echo "so nginx orders itself after the app units on boot"
+      cat <<EOT >rdm.target
+      [Unit]
+      Description=CaltechAUTHORS Granian bring-up (rdm + rdm_rest + rdm_celery + nginx)
+      Wants=rdm.service rdm_rest.service rdm_celery.service nginx.service
+      After=rdm.service rdm_rest.service rdm_celery.service nginx.service
+
+      [Install]
+      WantedBy=multi-user.target
+      EOT
+      sudo mv -v rdm.target /etc/systemd/system/
+      sudo chown root:root /etc/systemd/system/rdm.target
+      sudo chmod 664 /etc/systemd/system/rdm.target
+
+      sudo mkdir -p /etc/systemd/system/nginx.service.d
+      cat <<EOT | sudo tee /etc/systemd/system/nginx.service.d/rdm-ordering.conf >/dev/null
+      [Unit]
+      # Soft ordering only (no Requires=) -- nginx doesn't need the app up
+      # to itself start, this just avoids confusing early 502s on boot.
+      After=rdm.service rdm_rest.service
+      EOT
+
+      sudo systemctl daemon-reload
+      sudo systemctl enable rdm rdm_rest rdm_celery rdm.target
+
+      cat <<EOT
+
+         CaltechAUTHORS Granian test instance deployed at /Sites/${INSTANCE_NAME}
+         Python: 3.12 (via uv) | Branch: ${BRANCH}
+         Postgres/OpenSearch: local EBS via Docker, EMPTY -- restore real
+         SQL/OpenSearch data next via clasm's Backup & Restore workflow,
+         not invenio-cli demo data (deliberately not run this round).
+
+             cd /Sites/${INSTANCE_NAME}
+             sudo systemctl start rdm.target   # or: start rdm_celery rdm_rest rdm nginx
+
+         Check (after data is restored):
+             invenio-cli services status
+             sudo systemctl status rdm.target
+             /usr/local/bin/verify_rdm_boot.bash   # full acceptance check, esp. after a reboot
+
+         Stop:
+             sudo systemctl stop rdm.target
+             invenio-cli services stop
+
+      EOT
+    path: /usr/local/bin/setup_caltechauthors_granian.bash
+    owner: 'root:root'
+    permissions: '0775'
