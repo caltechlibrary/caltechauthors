@@ -99,3 +99,5 @@ postgres_env.cfg
 *.sql
 *.gz
 
+# Design, Review Plan and Implement
+decisions
