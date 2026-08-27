@@ -1,14 +1,19 @@
 [Unit]
 Description=Launch InvenioRDM Celery Task
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=tmorrell
-StandardOutput=kmsg
-StandardError=kmsg
+StandardOutput=journal
+StandardError=journal
 WorkingDirectory=/Sites/caltechauthors
 EnvironmentFile=/Sites/caltechauthors/.env
-ExecStart=/usr/local/bin/uv run celery --app invenio_app.celery worker --beat --events --loglevel INFO
+ExecStart=/usr/local/bin/uv run --no-sync celery --app invenio_app.celery worker --beat --events --loglevel INFO
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
