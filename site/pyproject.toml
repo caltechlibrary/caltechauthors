@@ -1,3 +1,19 @@
 [build-system]
 requires = ["setuptools", "wheel", "babel>2.8"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "caltechauthors"
+version = "1.0.2"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+tests = [
+  "pytest-invenio>=2.1.0,<3.0.0",
+]
+
+[project.entry-points."invenio_base.blueprints"]
+caltechauthors_views = "caltechauthors.views:create_blueprint"
+
+[project.entry-points."invenio_assets.webpack"]
+caltechauthors_theme = "caltechauthors.webpack:theme"

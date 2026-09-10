@@ -1,0 +1,30 @@
+[project]
+name = "caltechauthors-instance"
+version = "13.1.2"
+description = "CaltechAUTHORS Invenio RDM v13 instance"
+requires-python = ">=3.12"
+
+dependencies = [
+  "caltechauthors",
+  "invenio-app-rdm[opensearch2,s3]",
+  "idutils",
+  "invenio-s3",
+  "invenio-vocabularies",
+  "invenio-logging[sentry]",
+  "python-dotenv",
+  "granian",
+  "sqlalchemy",
+  "setuptools<82",
+]
+
+[dependency-groups]
+dev = [
+  "check-manifest>=0.25",
+]
+
+[tool.uv.sources]
+caltechauthors       = { path = "./site", editable = true }
+invenio-app-rdm      = { git = "https://github.com/caltechlibrary/invenio-app-rdm.git", tag = "v13.1.2.caltechauthors.2" }
+idutils              = { git = "https://github.com/caltechlibrary/idutils.git", branch = "authors" }
+invenio-s3           = { git = "https://github.com/caltechlibrary/invenio-s3.git", branch = "maint-v3.x" }
+invenio-vocabularies = { git = "https://github.com/caltechlibrary/invenio-vocabularies.git", branch = "maint-9.0.x" }
