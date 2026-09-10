@@ -1,6 +1,6 @@
 [project]
 name = "caltechauthors-instance"
-version = "13.1.2"
+version = "2.1.0"
 description = "CaltechAUTHORS Invenio RDM v13 instance"
 requires-python = ">=3.12"
 
