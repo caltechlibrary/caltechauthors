@@ -9,12 +9,12 @@ PartOf=rdm.target
 
 [Service]
 Type=simple
-User=tmorrell
+User=ubuntu
 StandardOutput=journal
 StandardError=journal
 WorkingDirectory=/Sites/caltechauthors
 EnvironmentFile=/Sites/caltechauthors/.env
-ExecStart=/usr/local/bin/uv run --no-sync granian --interface wsgi invenio_app.wsgi_ui:application --host 0.0.0.0 --port 5000 --workers 6 --blocking-threads 5 --workers-max-rss 1800 --respawn-failed-workers
+ExecStart=/home/ubuntu/.local/bin/uv run --no-sync granian --interface wsgi invenio_app.wsgi_ui:application --host 0.0.0.0 --port 5000 --workers 6 --blocking-threads 5 --workers-max-rss 1800 --respawn-failed-workers
 # Default control-group kill SIGTERMs the workers out from under the
 # master, which reads them as crashes and (with
 # --respawn-failed-workers) tries to replace them until

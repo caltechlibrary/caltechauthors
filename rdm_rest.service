@@ -9,12 +9,20 @@ PartOf=rdm.target
 
 [Service]
 Type=simple
-User=tmorrell
+User=ubuntu
 StandardOutput=journal
 StandardError=journal
 WorkingDirectory=/Sites/caltechauthors
 EnvironmentFile=/Sites/caltechauthors/.env
-ExecStart=/usr/local/bin/uv run --no-sync granian --interface wsgi invenio_app.wsgi_rest:application --host 0.0.0.0 --port 5001 --workers 6 --blocking-threads 5 --workers-max-rss 1800 --respawn-failed-workers
+# --url-path-prefix /api is Granian's equivalent of what uwsgi_rest.ini used
+# to do with "mount = /api=invenio_app.wsgi_rest:application" plus
+# "manage-script-name = true": it sets SCRIPT_NAME=/api and strips the prefix
+# from PATH_INFO, so the REST app knows where it is mounted and the paths it
+# generates itself (redirects, url_for()) keep the prefix. Dropping it in the
+# Granian migration is what 404'd the administration Banners page -- see the
+# "location /api" comment in nginx-caltechauthors.conf for the live evidence.
+# Paired with nginx forwarding /api/... unmodified: both, or neither.
+ExecStart=/home/ubuntu/.local/bin/uv run --no-sync granian --interface wsgi invenio_app.wsgi_rest:application --url-path-prefix /api --host 0.0.0.0 --port 5001 --workers 6 --blocking-threads 5 --workers-max-rss 1800 --respawn-failed-workers
 # Default control-group kill SIGTERMs the workers out from under the
 # master, which reads them as crashes and (with
 # --respawn-failed-workers) tries to replace them until
