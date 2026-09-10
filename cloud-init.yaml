@@ -542,6 +542,8 @@ write_files:
       # Soft ordering only (no Requires=) -- nginx doesn't need the app up
       # to itself start, this just avoids confusing early 502s on boot.
       After=rdm.service rdm_rest.service
+      # PartOf= so `systemctl stop rdm.target` takes nginx down too.
+      PartOf=rdm.target
       EOT
 
       sudo systemctl daemon-reload
