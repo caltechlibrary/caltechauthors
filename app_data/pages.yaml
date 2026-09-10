@@ -3,10 +3,16 @@
   title: CaltechAUTHORS Help
   description: Help documentation
   template: help.html
-- url: /help/statistics
-  title: CaltechAUTHORS Usage Statistics Help
-  description: Usage statistics help documentation 
-  template: help/statistics.html
+# /help/statistics is deliberately not listed. RDM serves that URL from its
+# own route (invenio_app_rdm.theme.views.help_statistics), so the Caltech
+# version is a template override at
+# templates/semantic-ui/invenio_app_rdm/help/statistics.en.html, not a
+# database page. It was listed here until 2026-09-10 pointing at
+# app_data/pages/help/statistics.html, but that file was always a full Jinja
+# template rather than page content -- invenio-pages would have stored the
+# Jinja source verbatim and rendered it through a sandboxed from_string(),
+# where "extends" does not do what it appears to. Hence the original commit
+# title, "Attempt to add custom stats help page".
 - url: /policies
   title: CaltechAUTHORS Policies
   description: CaltechAUTHORS Policies
