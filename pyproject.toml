@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 
 dependencies = [
   "caltechauthors",
-  "invenio-app-rdm[opensearch2,s3]",
+  "invenio-app-rdm[opensearch2,s3]~=13.1.0",
   "idutils",
   "invenio-s3",
   "invenio-vocabularies",
