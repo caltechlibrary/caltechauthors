@@ -129,6 +129,31 @@ write_files:
       EOT
       sysctl --system
 
+      # AWS CLI v2, last so a failed download cannot stop the toolchain above.
+      # cloud-init has installed `unzip` "for the AWS CLI v2 installer" since
+      # 2026-08-18 but nothing ever ran the installer, so clasm's backup and
+      # restore workflows, which run `aws s3` on the instance, failed their
+      # preflight on every new instance (third occurrence, 2026-09-29). Same
+      # commands as clasm's instance_install_awscli.bash, which worked on
+      # caltechauthors-test-v13; arch-aware because the Multipass images are
+      # aarch64 on Apple silicon and production is x86_64.
+      echo "Installing AWS CLI v2..."
+      if command -v aws >/dev/null 2>&1; then
+        echo "AWS CLI already installed: $(aws --version 2>&1)"
+      else
+        case "$(uname -m)" in
+          x86_64) AWSCLI_ARCH=x86_64 ;;
+          aarch64) AWSCLI_ARCH=aarch64 ;;
+          *) echo "Unsupported architecture for the AWS CLI: $(uname -m)" >&2; exit 1 ;;
+        esac
+        AWSCLI_TMP=$(mktemp -d /var/tmp/awscli-install.XXXXXX)
+        curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${AWSCLI_ARCH}.zip" -o "$AWSCLI_TMP/awscliv2.zip"
+        unzip -q "$AWSCLI_TMP/awscliv2.zip" -d "$AWSCLI_TMP"
+        "$AWSCLI_TMP/aws/install"
+        rm -r "$AWSCLI_TMP"
+        echo "Installed: $(aws --version 2>&1)"
+      fi
+
     path: /usr/local/bin/install_rdm_toolchain.bash
     owner: 'root:root'
     permissions: '0775'
