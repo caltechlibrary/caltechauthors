@@ -10,9 +10,38 @@ TransportError(429, 'circuit_breaking_exception',
    which is larger than the limit of [510027366/486.3mb] ...')
 ```
 
-**Status: a diagnosis and a proposed fix. Nothing on the host or in this
-repository's configuration has been changed.** Both changes below are
-production changes for the person who runs the host, in a maintenance window.
+**Status (2026-10-06): the heap change is made in this repository's
+`docker-services.yml` (`-Xms4g -Xmx4g`) but is not yet applied on the host.
+The OAI-PMH rate limit is still only proposed.** Both are production changes for
+the person who runs the host, in a maintenance window.
+
+## Recurrence, 2026-10-06
+
+A third failure of the same kind, reported as a few minutes of the authors indexes
+not responding with a "no shard available" error in the docker logs. Read-only
+inspection of `caltechauthors-v13` showed:
+
+- At 03:00 UTC the JVM spent 40 to 80% of its time collecting garbage, a G1GC
+  attempt freed nothing (517 MB before, 520 MB after), and
+  `java.lang.OutOfMemoryError: Java heap space` ended the process. `OOMKilled` is
+  false and `dmesg` shows no kernel OOM kill.
+- Docker restarted the container at 03:00:32 (`restart: unless-stopped`). The node
+  was back by 03:00:39 but the cluster state was not recovered until 03:01:02, and
+  health went from RED to YELLOW at 03:01:28. Requests in between failed with
+  `ClusterBlockException: SERVICE_UNAVAILABLE/1/state not recovered`. That window
+  is the "no shard available" the reporter saw; it is a symptom of the restart,
+  not a separate fault.
+- Afterwards: 70 primaries started, 66 replicas unassigned
+  (`CLUSTER_RECOVERED`, decider `same_shard`). That is expected on a single node
+  and is why the cluster is yellow, not a fault.
+- Heap was at 63% of 512 MB with the instance otherwise idle, so there is no
+  headroom for a burst. The node holds about 18 million documents in 70 shards.
+- No snapshot-repository errors (`AccessDeniedException`, snapshot 404) appeared in
+  the 02:30 to 03:30 UTC window, so this is not the restore-then-archive
+  ownership defect. Whether the migrated indices raised the baseline heap use is
+  not established.
+- `RestartCount` was 1, not the 281 recorded on 2026-10-02, so the container has
+  been recreated since then; when and by whom is not established here.
 
 ## What the host showed
 
