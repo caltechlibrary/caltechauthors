@@ -428,7 +428,7 @@ wheels = [
 
 [[package]]
 name = "caltechauthors"
-version = "1.0.2"
+version = "2.1.0"
 source = { editable = "site" }
 
 [package.metadata]
@@ -437,7 +437,7 @@ provides-extras = ["tests"]
 
 [[package]]
 name = "caltechauthors-instance"
-version = "13.1.2"
+version = "2.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "caltechauthors" },
