@@ -94,6 +94,119 @@ write down which of those you used.
 
 Newest first. Each entry: what was measured, how, what it means, what is open.
 
+### 2026-10-07 evening: load 8 again, IIIF repeat rate, IIIF cache
+
+Question: why was load above 8 at 18:12Z, and can a cache for IIIF renders
+help? Measured read-only over SSM (host snapshot, then the last 15 minutes of
+`access.log`, new-format lines only). All figures are from that 15-minute
+sample (17:58 to 18:12Z, 3,631 requests, 14,220 upstream seconds) unless stated.
+
+- **Host:** load 8.4, 9.1 and 8.9 (1, 5, 15 minutes) on 8 cores. Six REST
+  Granian workers at 40 to 80 percent CPU each, one Ghostscript render running.
+  OpenSearch calm (2 percent CPU, up 20 hours, no restart): the heap fix holds.
+  Statuses in the window: 504 on 193 requests, 499 on 183, 429 on 150.
+- **Who:** undeclared clients used 13,400 of the 14,220 upstream seconds (94
+  percent): Windows UAs 6,336, mobile 3,993, Mac 1,823, Linux 1,261, nearly all on
+  the API paths. Exa 362 seconds (2.5 percent, 43 of the 150 429s); every other
+  declared bot under 210. A burst at 18:08 to 18:11 doubled the request rate
+  (405 a minute against about 200). Singapore sent 408 requests (11 percent),
+  China 286, Hong Kong 126, Brazil 117. No fingerprinting of the burst was done,
+  so one actor is not established.
+- **IIIF repeat rate (the open measurement from 10-06):** 104 IIIF requests for
+  **21 distinct URLs**, about 5 per URL, 99 of them PDF renders. 88 percent failed
+  (46 504, 42 429, 12 200). IIIF cost 3,126 upstream seconds, about 30 s a request,
+  the most expensive path class.
+- **Renders are slow:** one PDF render took 54.7 s upstream under that load.
+  nginx's default `proxy_read_timeout` is 60 s, so a render finishing after it is
+  cut off, returns 504 and cannot be cached.
+- **RDM's headers on a render:** `Cache-Control: public, max-age=300`, an
+  `Expires`, no `Set-Cookie`, no `Vary`. nginx would honour that without any
+  `proxy_cache_valid`.
+
+**Change applied to production, 18:21Z (backups `*.bak-20261007-iiifcache`,
+gated by `nginx -t`, graceful reload):** a new
+`/etc/nginx/conf.d/caltechauthors_cache.conf` (`proxy_cache_path`, 2 GB, 1 h
+inactive); in `location ^~ /api/iiif/` a `proxy_cache` with `proxy_cache_lock` (120
+s timeouts), `proxy_cache_use_stale`, `proxy_read_timeout 120s`, and bypass and no-store
+for any request with a cookie, an `Authorization` header or a `token` argument
+(so only anonymous responses are ever stored); and an appended
+`cache="$upstream_cache_status"` log field.
+
+**First attempt did not cache.** The cookie request logged `cache=BYPASS` as
+intended, but plain requests logged `MISS` twice for one URL and the cache
+directory stayed empty. The cause was `proxy_buffering off;` at server level
+(site config line 395), inherited by the IIIF location; nginx does not store an
+unbuffered response, so the lock could not collapse requests either.
+
+**Second change, applied at about 18:34Z (reconstructed from the run time; no timestamp was logged) with the author's go-ahead (backup
+`caltechauthors.conf.bak-20261007-iiifbuf`, `nginx -t`, graceful reload):**
+`proxy_buffering on;` inside `location ^~ /api/iiif/` only. The lifetime stays at
+RDM's five minutes; a longer one waits for the log.
+
+**Verified once, with one URL:** the first request (a MISS) took 78 s to render and
+was stored (one 156 KB file); the next two came back in 0.03 s (HIT); a request
+with a cookie logged BYPASS and went to RDM. **No real traffic has exercised it
+yet:** only 5 IIIF requests were logged in the 8 minutes afterwards, 3 of them
+mine, and load was 4.0 and falling as the burst eased (3.3 at 18:26Z, 4.0 at 18:38Z),
+so the fall is not evidence for or against the cache.
+
+- **Side effect to watch:** `proxy_read_timeout 120s` keeps a stalled upstream
+  request for twice as long, holding an `iiif_conc` slot (cap 6) longer and
+  possibly raising 429s for others. The 78 s first render shows the longer
+  timeout was needed: the 60 s default would have cut it off, uncached.
+- **My test requests** each caused a render; the 120 s 504s in them are RDM
+  stalling under load, not the cache.
+- The bypass is "any cookie", stricter than "logged in": anonymous readers who
+  carry a cookie (an RDM session or CSRF cookie, a consent cookie) are not served
+  from the cache. The log does not record cookies, so the share is unknown.
+
+**Cap analysis (read-only, 18:42Z; 19.6 hours, 70,657 seconds, non-campus `/api`,
+429s excluded because they never held a slot).** Concurrency is computed from each
+request's end time and `rt`, so it is the real in-flight count, not an estimate.
+
+- `/api` (cap `api_conc` 24): median 7 in flight, p90 21. At 4 or more in flight 66
+  percent of seconds, 8 or more 46 percent, 12 or more 34 percent, 24 or more 5.7
+  percent. The cap already binds; sustained overload is the problem, not a loose
+  cap at the extreme. (A maximum of 142 is from before the caps were applied at
+  23:21Z on 10-06.)
+- `/api/iiif/` (cap `iiif_conc` 6): median 2, p90 6; at the cap in 14.8 percent of
+  seconds, 2 or more renders running in 53 percent.
+- Campus `/api` (exempt): p99 of 3 in flight, maximum 11, 1.8 percent of seconds at
+  2 or more. The exemption costs almost nothing.
+- Per-minute view (in-flight estimated as upstream seconds over 60, so slowness
+  inflates it): below about 4 in flight the API averaged 0.79 s a request with 0.1
+  percent 504s; at 4 to 8, 5 s and 4 percent; above 8, 11 to 25 s with 13 to 33
+  percent 504s and 25 to 42 percent 499s. The request rate stayed flat at about 50
+  to 70 a minute across the buckets, so the damage comes from what is asked for,
+  not how much. IIIF success fell from 67 percent at 0 to 4 in flight to 7 to 19
+  percent above 8. This gives no threshold for a cap, because slowness raises the
+  estimate.
+- **Interaction with the cache:** a request waiting on the cache lock still counts
+  against `iiif_conc`. Lowering the IIIF cap could let a few waiters on one hot URL
+  use every slot and 429 other URLs while one render runs. Do not lower it before the
+  hit rate is known.
+- **Recommendation recorded 10-07, no cap changed:** let the cache run, re-measure
+  with this method, then decide. The candidate is `api_conc` 24 to 12 or 16, which
+  turns 20 to 60 s timeouts into immediate 429s, at the price of more 429s for
+  off-campus readers (already 6.6 percent of API requests). Treat it as an
+  experiment with a rollback.
+
+Open:
+1. Tally the `cache=` field for `/api/iiif/` (HIT, MISS, EXPIRED, BYPASS) over a
+   few hours of real traffic, with the 504 and 429 counts, to see whether it
+   helps, and decide on a longer lifetime (a candidate is 6 h with
+   `proxy_ignore_headers Cache-Control Expires` and `proxy_cache_valid 200 6h`;
+   the exposure is a record made restricted or taken down staying visible to
+   anonymous visitors for that long; deleting the cache files clears it).
+2. Narrow the bypass from any cookie to the RDM session cookie and `Authorization`
+   once the share of cookie-bearing readers is known.
+3. Re-run the cap analysis after a few hours with the cache, then decide on
+   `api_conc` (and the IIIF cap), with the author's go-ahead (production change).
+4. Rollback if needed: restore the `*.bak-20261007-iiifcache` files (site config and
+   `caltechauthors_log.conf`), remove `caltechauthors_cache.conf`, `nginx -t`, reload.
+   The repo copies of the nginx files now match production; `/etc/nginx` is not
+   under git.
+
 ### 2026-10-07: survey of declared bots, cost by family, 10-07 429s
 
 Question: which other declared bots (Anthropic, OpenAI, Google, Meta and so on)
