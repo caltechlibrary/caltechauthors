@@ -94,6 +94,105 @@ write down which of those you used.
 
 Newest first. Each entry: what was measured, how, what it means, what is open.
 
+### 2026-10-07: survey of declared bots, cost by family, 10-07 429s
+
+Question: which other declared bots (Anthropic, OpenAI, Google, Meta and so on)
+are in the log, what do they cost, and who is being limited by the caps?
+Measured at 15:52Z over logs 2026-10-03 through 2026-10-07 (the 7th is
+partial), read-only over SSM. First pass: `bot-traffic-report.bash` with a
+pattern naming about 50 known crawlers. Second pass: `bot-family-breakdown.bash`,
+which groups user agents into families (the version run here had the
+missing-header bug below; the repository copy is fixed). The
+upstream-seconds figures use only new-format lines, which cover about 17 hours
+(from 10-06 23:00Z), while request counts cover all five days. Do not compare
+the two directly.
+
+Declared bots, requests over five days (about 1.99 million in all; the named
+set is 18 to 23 percent of each day):
+
+| Requests | Bot | Operator |
+|---|---|---|
+| 117,499 | ExaSearchBot/1.0 | Exa |
+| 36,143 | bingbot/2.0 | Microsoft |
+| 36,140 | Applebot/0.1 | Apple |
+| 35,840 | SemrushBot/7 | Semrush |
+| 35,636 | Googlebot/2.1 (a phone UA, Chrome/153; unverified) | Google |
+| 35,210 | ChatGPT-User/1.0 | OpenAI |
+| 28,302 / 14,285 | meta-webindexer/1.1 / meta-externalads/1.1 | Meta |
+| 24,473 | SemanticScholarBot | Allen Institute |
+| 24,141 | DotBot/1.2 | Moz |
+| 23,868 | Baiduspider (with `-render`) | Baidu |
+| 13,751 | OAI-SearchBot/1.4 | OpenAI |
+| 13,034 | Claude-User/1.0 | Anthropic |
+| 10,106 | PerplexityBot/1.0 | Perplexity |
+| 8,363 | KeenableBot/1.0 | Keenable |
+| 19,711 | `python-requests/2.34.2` | unnamed |
+
+Also seen: Sogou, SentryUptimeBot, DataForSeoBot, YandexBot, DuckDuckBot,
+HaloBot. **Not seen at all:** ClaudeBot, GPTBot, Google-Extended, CCBot,
+Bytespider, Amazonbot. Whether `robots.txt` or something upstream explains
+that was not checked. OpenAI sends about 49,000 over five days against
+Anthropic's 13,000, and Anthropic sends only the user-initiated fetcher.
+
+What each family costs (the `api-*` paths are what load RDM):
+
+- **The declared bots are cheap, with two exceptions.** Almost all crawl the
+  HTML pages and static files: `api-*` share is 0 to 0.3 percent for Applebot,
+  bingbot, Googlebot, OpenAI, Claude-User, Semrush, Perplexity, DotBot,
+  Baiduspider and SemanticScholar, and they cost 0.08 to 0.45 s of upstream
+  time per request.
+- **Exa** sends 39.5 percent of its requests to `api-*` (the record, versions,
+  communities lockstep) at 0.47 s a request, and about 1,500 of the 1,800
+  upstream seconds it used in the window were on the API.
+- **meta-webindexer** is the other declared exception: 39.7 percent `api-*`,
+  0.93 s a request, 9,283 upstream seconds in the window (about five times Exa's
+  1,824 and the most of any declared bot, about 8,300 of it on the API). It is the declared
+  bot with the highest load on RDM and was not on the earlier list as a concern.
+  Its UA is a Chrome-looking string with `meta-webindexer/1.1` appended.
+- **`python-requests`** is the most expensive per request, 3.1 s, 92.6 percent
+  `api-*`, but only 260 requests in the window.
+- **The undeclared traffic is the load.** Upstream seconds in the window: mobile
+  UAs 168,000 (3.6 s a request; 103,000 s of it IIIF), Windows 172,000
+  (2.1 s a request), Mac 43,000, Linux 26,000. All declared bots together are
+  about 26,000. This corrects the 10-06 baseline, which described a Windows
+  Chrome wave: the expensive IIIF load is as much Android and Firefox mobile
+  UAs as Windows Chrome.
+
+429s on 10-07 (3,830 by 15:52Z, against 683 on 10-06):
+
+- **None from campus** (`131.215.0.0/16`: 0), so no sign yet of real readers
+  being limited.
+- 93 percent went to undeclared clients. Rate by family: mobile 4.6 percent of
+  its requests, Exa 2.5 percent (96 limited), Windows 1.4, meta-webindexer 1.3
+  (131), Mac 0.6. No 429s for Applebot, bingbot, OpenAI, Claude-User, Semrush,
+  Perplexity or DotBot; Googlebot's UA got 2.
+- **Exa now sees 429s**, which it did not before 10-06. Whether its volume
+  falls as a result is not yet known.
+- By path: 2,026 (53 percent) were `/api/iiif/` (the `iiif_conc` cap of 6), then
+  the record API endpoints. By hour, peaks at 14Z (676), 05Z (483), 13Z (453).
+- Countries: US 492, BR 428, SG 424, AR 247, CN 179, HK 149. 65 percent sent no
+  platform client hint. The top user agents are Windows Chrome/148 and /154
+  and Android Firefox 152 to 155, none above 134 requests, so the spread is wide
+  and no single client dominates.
+- The `cf_ray` and `sec-ch-ua` presence counts from this breakdown are not
+  valid (the log writes `-`, not an empty string, for a missing header, and the
+  script tested for empty). Only the platform-hint figure above is sound. Fixed
+  in `bot-family-breakdown.bash` and checked on a synthetic log.
+
+What this means: none of the declared AI or search bots is the capacity
+problem. The caps are hitting the undeclared mobile and desktop wave and, now
+and then, Exa and Meta. `Googlebot`, `bingbot` and the others are claims
+that were not verified against the vendors' address ranges.
+
+Open:
+1. Verify the claims for Googlebot, bingbot, ChatGPT-User, Claude-User and Meta
+   against published ranges, using only log lines from 10-06 22:00Z on (earlier
+   addresses are Cloudflare edges).
+2. Decide the policy for meta-webindexer and Exa (both reach the API paths);
+   checking `robots.txt` first.
+3. Rerun `bot-family-breakdown.bash` on 10-08 or 10-09 (edit its hard-coded 429
+   day first).
+
 ### 2026-10-06: ExaSearchBot (check after the first report)
 
 Question: did ExaSearchBot adapt after the earlier attack? Measured with
