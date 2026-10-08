@@ -57,6 +57,7 @@ function fam(u,   l) {
   if (l ~ /dotbot/) return "DotBot"
   if (l ~ /baiduspider/) return "Baiduspider"
   if (l ~ /keenablebot/) return "KeenableBot"
+  if (l ~ /akashicai/) return "AkashicAI"
   if (l ~ /python-requests/) return "python-requests"
   if (l ~ /bot|spider|crawler|slurp|uptime/) return "other-declared"
   if (l ~ /windows nt/) return "undeclared Windows"
