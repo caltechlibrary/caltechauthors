@@ -94,6 +94,115 @@ write down which of those you used.
 
 Newest first. Each entry: what was measured, how, what it means, what is open.
 
+### 2026-10-08: load plateaus, the IIIF cache is not hitting, why narrowing the bypass fails
+
+Question: is the load of about 6 seen on the morning of 10-08 a configuration
+problem or ordinary traffic? Measured read-only over SSM at 21:11Z: host snapshot,
+`bot-traffic-report.bash` (five days, pattern for Exa and Meta),
+`bot-family-breakdown.bash` (429 day edited to 08/Oct; its headings still say
+10-07), `sar -q` for the day, and IIIF requests per hour with their `cache=`
+value and status.
+
+- **Host:** 8 cores, 31 GB (14 GB available), load 1.4 at 21:11Z, six or more
+  Granian workers, nothing else busy.
+- **Errors fell sharply:** 504s 5,790 on 10-07 against 394 on 10-08; 499s 11,402
+  against 2,100; 429s 5,364 against 1,381 (none from `131.215.0.0/16`).
+- **The plateaus are IIIF render waves.** `sar -q` gives the 15-minute average
+  (the `ldavg-15` column; an earlier reading of it as the 1-minute average was
+  wrong). It reached 6.7 at 00:40 to 01:10Z, 5.2 at 10:20 to 10:50Z, 4.2 at
+  15:20 to 15:50Z, 3.8 at 05:30Z and 12:50 to 14:00Z, and sat at 0.5 to 1.2
+  between. Every one of those hours had IIIF 429s (68 to 327) and most had
+  504s; the quiet hours had none. IIIF is the largest upstream cost (212,000
+  seconds since 10-06 23Z, against about 100,000 for `api-record`), and undeclared
+  mobile UAs cost 2.8 s a request and send two thirds of the IIIF time. The
+  02 to 04Z Exa burst (up to 4,700 requests an hour) left load near 1.2: Exa is
+  not the cause. Load 6 on 8 cores is busy, not overloaded; the caps keep it
+  there instead of at 8 to 9 with 504s.
+- **The IIIF cache does not help.** From 18Z on 10-07 through 21Z on 10-08, HIT
+  was 2 in total, MISS about 600, and BYPASS 85 to 95 percent of IIIF requests
+  every hour. Nearly every anonymous reader carries a cookie, so the "any
+  cookie" bypass rule (open item 2 of the 10-07 evening entry) excludes them.
+  The few stored renders were not asked for again inside RDM's five minutes.
+- **Narrowing the bypass to RDM's session cookie would not fix it.** Tested with
+  `curl` from the instance: an anonymous GET of `/`, `/search` and `/records/1`
+  each returns `Set-Cookie: session=...`; only `/api/records` does not. Any reader
+  who has loaded a page therefore carries `session`, and nginx cannot tell an
+  anonymous `session` from a logged-in one. Caching without a cookie bypass risks
+  serving a logged-in reader's render of a restricted file to an anonymous one
+  for five minutes. That is why the cookie bypass was not simply narrowed.
+- **A signal that does tell them apart: `X-User-ID`.** Single sign-on (Shibboleth)
+  happens inside RDM, not at nginx: there is no `shibd`, Apache or `/etc/shibboleth`
+  on the instance and the only sign-in traffic is `POST /login/`. The site config
+  already hides Invenio's `X-Session-ID` and `X-User-ID` response headers from
+  clients (`proxy_hide_header`), so the application sends them, and nginx reads
+  them as `$upstream_http_x_user_id`. **Experiment, 21:55Z** (`map` plus a
+  second, conditional `access_log` written only when the header is present,
+  holding time, status, method and path with no query string, and `auth=user`;
+  never the user id): 114 lines from one logged-in staff session, all 200 or 302,
+  on `/api/*`, record pages, `/me/uploads` and one `/preview/` request. The header
+  is sent on every authenticated route tested. **It was not seen on a `/api/iiif/`
+  request:** the author's PDF viewing went through pdf.js (`/preview/` then
+  `/records/<id>/files/<name>.pdf`, a 302), which does not use IIIF at all, so no
+  logged-in IIIF request was ever made. Logged-in readers rarely if ever use IIIF;
+  the IIIF load is the undeclared automated traffic fetching render links.
+- **First attempt failed safely.** A `map` in `caltechauthors_log.conf` (to put
+  `anon` or `user` in the main log) was rejected by `nginx -t`:
+  `redirect-map.conf` sets `map_hash_max_size` and `map_hash_bucket_size`, and nginx
+  reports them as a duplicate once any `map` has been parsed earlier. The backup was
+  restored; nothing changed. A permanent `auth` field in the main log needs those two
+  directives moved, or the log configuration loaded after `redirect-map.conf`; that
+  is undecided.
+
+**Change applied to production, 2026-10-08 after 22:00Z** (backup
+`caltechauthors.conf.bak-20261008-cachecookie`, `nginx -t`, graceful reload;
+repository copies updated to match): in `location ^~ /api/iiif/`, the cookie is no
+longer a bypass or a reason not to store, and a response is never stored when the
+application marked it authenticated:
+
+```
+proxy_cache_bypass $http_authorization $arg_token $arg_access_token;
+proxy_no_cache     $http_authorization $arg_token $arg_access_token $upstream_http_x_user_id;
+```
+
+Anonymous readers now reach the cache; a logged-in reader's response is not
+stored. Also in place: the 21:55Z experiment (`auth-requests.log`, backup
+`caltechauthors.conf.bak-20261008-authlog`), to be removed once a logged-in IIIF
+request has been checked.
+
+**Not verified.** (1) That `/api/iiif/` responses carry `X-User-ID` for a logged-in
+reader; if they do not, a logged-in render of a restricted file could be stored and
+served to anonymous readers for up to five minutes. One logged-in request to
+`/api/iiif/record:<id>:<file>/full/300,/0/default.png` and a look at
+`auth-requests.log` would settle it. (2) That an anonymous request for a
+restricted record returns a response nginx will not store (a 403 without cache
+headers should not be). (3) The effect: HIT was 2 in 31 hours before.
+- **Other findings:** `citation-weekend-agent/2.0` is a self-described agent not in
+  any declared pattern (227 of the day's 429s); Exa sends no 429s today and
+  costs 0.23 s a request; meta-webindexer is still the costliest declared bot
+  (9,976 upstream seconds in the window); `ja3`, `ja4` and `bot_score` are still
+  empty; undeclared clients are about 1.5 million of about 2 million requests.
+- **The production site config does not match the repository copy.** SHA-256 of
+  `/etc/nginx/sites-enabled/caltechauthors.conf` differs from
+  `nginx-caltechauthors.conf` (and the cache file likewise); the difference
+  has not been read yet.
+
+Open:
+1. Measure the cache after a few hours of weekday traffic: `cache=` HIT, MISS and
+   BYPASS for `/api/iiif/`, with 429, 504 and the load plateaus against the 10-08
+   baseline above. Check `auth-requests.log` for any `/api/iiif/` line.
+2. Confirm that IIIF sends `X-User-ID` (see Not verified), then remove the
+   experiment: restore `caltechauthors.conf.bak-20261008-authlog`'s `map` and
+   `access_log` lines by hand (the cache change is later than that backup, so do
+   not restore the whole file) and delete `auth-requests.log`.
+3. Decide the permanent `auth` field in the main log (move `map_hash_*`, or load
+   the log configuration after `redirect-map.conf`).
+4. Diff the production site config against the repository copy and bring the
+   repository back in line (their hashes differed on 10-08 before any change of
+   mine; the IIIF cache lines now match).
+5. Rerun `bot-family-breakdown.bash` with its labels made date-neutral.
+6. `GET /login/` returned 200 about 5,579 times on 10-08, about 13 a minute, almost
+   certainly automated; not yet looked at.
+
 ### 2026-10-07 evening: load 8 again, IIIF repeat rate, IIIF cache
 
 Question: why was load above 8 at 18:12Z, and can a cache for IIIF renders
