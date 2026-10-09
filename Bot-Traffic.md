@@ -94,6 +94,111 @@ write down which of those you used.
 
 Newest first. Each entry: what was measured, how, what it means, what is open.
 
+### 2026-10-09: the IIIF cache works, `X-User-ID` confirmed, experiment removed, a 06Z stall
+
+Measured read-only over SSM from `access.log`, `error.log`, `journalctl` and
+`docker logs` of `caltechauthors-v13`, aggregates only (no client addresses, no
+paths beyond the first segments, user agents only for the top few undeclared
+failures, journal messages masked and counted). Today's figures run from 00:00Z to
+about 16:05Z.
+
+**The cache change of 10-08 (22Z) works.** `/api/iiif/` today, 9,927 requests:
+`cache=` HIT 1,587 (16 percent of requests, 22 percent of the 7,330 successful
+ones), MISS 200 5,726, EXPIRED 17; 429 207, 504 32, 500 316, 404 1,108, 301 879,
+499 49, 502 6. BYPASS is 0 (it was 85 to 95 percent; HIT was 2 in 31 hours). On
+10-08 HIT was 0 in every hour before 22Z, 10 percent at 22Z and 16 percent at 23Z.
+Same hours, similar volume (13 to 15Z):
+
+| | 10-08, no cache | 10-09, cache |
+|---|---|---|
+| IIIF requests | 2,112 | 2,481 |
+| IIIF 429 | 569 (27 percent) | 25 (1.0 percent) |
+| IIIF 504 | 68 (3.2 percent) | 0 |
+| Load average | about 6 on 8 cores | 0.74 |
+
+Suggestive, not a controlled test: yesterday's trouble hours were bot waves, and
+today's busy window had none.
+
+**`limit_conn` and the error log.** `error_log ... warn` is live, so rejections
+show. Per hour they match the 429s in the access log (at 06Z, `api_conc` 173 plus
+`iiif_conc` 113 is 286, exactly the 131 IIIF and 155 other API 429s). Yesterday's
+504s match the `upstream timed out` lines hour by hour. There were no
+`buffered-response-to-disk` lines at all.
+
+**`X-User-ID` is sent on IIIF.** A logged-in request for a public record's image
+(a width nobody had asked for, so that it reached the application) was logged by
+the experiment with `auth=user`, status 200, `cache=MISS`, 3.8 seconds. The
+`proxy_no_cache ... $upstream_http_x_user_id` rule therefore has what it needs.
+What was **not** shown is that nginx did not store that response (see the next
+paragraph).
+
+**The experiment is removed** (2026-10-09 16:30Z). Lines 12 to 22 of
+`/etc/nginx/sites-available/caltechauthors.conf` (the `map`, the
+`log_format caltechauthors_authlog` and the conditional `access_log`) were deleted
+by a script that checked the block byte for byte, backed up to
+`caltechauthors.conf.bak-20261009-removeauthlog`, passed `nginx -t`, reloaded, and
+diffed against the pre-experiment original (`bak-20261008-authlog`): only the two
+`proxy_cache_bypass`/`proxy_no_cache` lines differ, which is the intended change.
+`/var/log/nginx/auth-requests.log` (99 KB, no logrotate entry, the paths of logged-in
+readers' requests) was deleted. The 10-08 backups and
+`caltechauthors_log.conf.bak-20261008-authfield` are still on the host and harmless.
+
+**Open question, not verified in production: does Cloudflare store authenticated
+IIIF responses?** An anonymous request for the same URL, two minutes after the
+logged-in one, returned `cf-cache-status: HIT`, `age: 122` (stored at the second of
+the logged-in request), `cache-control: public, max-age=14400` and never reached the
+origin. RDM's own value is `max-age=300`, so something in the campus Cloudflare
+configuration overrides it. For a public record that is harmless. In the code,
+IIIF images are built by `flask.send_file` in `invenio_rdm_records/resources/iiif.py`
+(invenio-rdm-records 20.3.1 with flask-iiif 1.3.0 on v13; 32.2.0 with flask-iiif 2.1.0
+on v14, the same code), which with `SEND_FILE_MAX_AGE_DEFAULT = 300` in `invenio.cfg`
+sets `Cache-Control: public, max-age=300` with **no restricted-record branch**; the
+files endpoint (`invenio_files_rest/helpers.py`) does have one. So a permitted reader's
+render of a restricted file very probably carries `public` too, and whether Cloudflare
+keeps it is unknown. nginx's `X-User-ID` rule protects only our own cache. Testing it
+needs a throwaway restricted record, which the author is not authorized to create, so
+it is for Tom or a librarian, with a Cloudflare purge of the URL afterwards. A candidate
+fix is `Cache-Control: private, no-store` from nginx on responses that carry
+`X-User-ID` (a `map` placed after `redirect-map.conf`, because of `map_hash_*`), to be
+tested against the Cloudflare override. `data.caltech.edu` is behind Cloudflare too.
+
+**A stall at 05:55 to 06:45Z that is not a bot wave.** 645 failures (429 plus 504,
+3.8 percent of 17,055 requests); the quiet 09Z hour had 4. API volume was the same in
+both hours (2,908 against 2,783); IIIF was lower (248 against 642). Failures sat on API
+classes (`api-record` 20 percent, `api-communities` 20 percent, `api-iiif` 65 percent,
+`api-search` 12 percent) and almost never on UI pages. 315 of 7,471 clients failed; the
+busiest single client made 541 requests; declared bots almost never failed. The 248 IIIF
+requests were for only 55 distinct URLs, so the same renders were retried while they
+failed (failures are not cached; `proxy_cache_lock` and `proxy_cache_use_stale` are
+already on). Failures decayed to none after 06:50Z. Yesterday's 00Z hour had the same
+shape. Ruled out: cron (only the SQL backup at 03, 11, 15, 19 and 23 UTC), `apt`
+(unattended-upgrades ran at 06:50 and found nothing), memory (15 GB used, 16 GB
+available, no swap, no kernel out-of-memory), OpenSearch (no GC overhead lines),
+Postgres, the UI worker pool. Seen: the REST service (Granian, 6 workers by 5 threads,
+`--workers-max-rss 1800`) respawns workers whenever one passes 1,800 MB, **1 to 7 times
+an hour across the last 72 hours including quiet hours**, so respawns alone do not
+explain it; 06Z had 7 (06:18, 06:24, 06:27, 06:36, 06:37, 06:43, 06:44) but failures
+began before the first of them. The cause is **not found**. Next read: per-5-minute
+median and 95th percentile of `urt` for API classes in 05:30 to 07:00Z (the whole REST
+side slow points at a dependency, particular request types at the application).
+
+**Other measured leads, not investigated.** The 500s are bursty (today 03Z 158, 12Z 114,
+13Z 44; yesterday about 604, at 05Z, 12Z, 17Z and 23Z), older than the cache change,
+and only the REST service's log can say why. 43 API 429s today (10Z to 12Z) and 26 on
+10-08 at 23Z came from somewhere other than nginx (no `api_conc` line), probably RDM's
+own rate limit, unconfirmed. The error log's `other` lines (12 to 67 an hour) are
+unclassified.
+
+Open:
+1. The Cloudflare question above: Tom or a librarian to test with a throwaway
+   restricted record; then the nginx `private` fix, and an upstream report to
+   invenio-rdm-records or flask-iiif.
+2. The 06Z stall (the `urt` read above, then the REST journal around 05:50), with the
+   Granian settings' worker and thread tuning, still unverified.
+3. The 500 bursts and the non-nginx API 429s.
+4. The items still open from 10-08 below: 3 (the permanent `auth` field), 4 (the
+   production site config against the repository copy), 5 and 6.
+
 ### 2026-10-08: load plateaus, the IIIF cache is not hitting, why narrowing the bypass fails
 
 Question: is the load of about 6 seen on the morning of 10-08 a configuration
@@ -187,13 +292,13 @@ headers should not be). (3) The effect: HIT was 2 in 31 hours before.
   has not been read yet.
 
 Open:
-1. Measure the cache after a few hours of weekday traffic: `cache=` HIT, MISS and
-   BYPASS for `/api/iiif/`, with 429, 504 and the load plateaus against the 10-08
-   baseline above. Check `auth-requests.log` for any `/api/iiif/` line.
-2. Confirm that IIIF sends `X-User-ID` (see Not verified), then remove the
-   experiment: restore `caltechauthors.conf.bak-20261008-authlog`'s `map` and
-   `access_log` lines by hand (the cache change is later than that backup, so do
-   not restore the whole file) and delete `auth-requests.log`.
+1. ~~Measure the cache after a few hours of weekday traffic.~~ **Done 2026-10-09**,
+   see the entry above: HIT 16 percent, BYPASS 0, load about 1.
+2. ~~Confirm that IIIF sends `X-User-ID`, then remove the experiment.~~ **Done
+   2026-10-09**, see the entry above: it is sent; the experiment and
+   `auth-requests.log` are gone. The question of whether nginx stored the logged-in
+   response was not answered (Cloudflare answered the repeat request), and a new one
+   about Cloudflare's own cache is open there.
 3. Decide the permanent `auth` field in the main log (move `map_hash_*`, or load
    the log configuration after `redirect-map.conf`).
 4. Diff the production site config against the repository copy and bring the
