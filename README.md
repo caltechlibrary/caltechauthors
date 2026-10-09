@@ -87,13 +87,14 @@ pipenv run invenio vocabularies import --vocabulary names --filepath ./vocabular
 You'll need a domain name, and set an A record to point the domain name to your
 AWS instance.
 
-Move nginx.conf to `/etc/nginx/sites-enabled/default`
+Install the nginx configuration with `nginx-deploy.bash` (see `docs/nginx.md`).
+It renders `nginx/` for the host, checks it with `nginx -t` and `logagent check`
+before copying anything, and leaves the packaged `/etc/nginx/nginx.conf` alone.
+Obtain the certificate with `sudo certbot certonly`, not `certbot --nginx`.
 
-Copy redirect-map.conf to `/etc/nginx/`
-
-Get a certificate with `sudo certbot --nginx`
-
-Restart nginx with `sudo service nginx restart`
+> The script and `docs/nginx.md` are not written yet (caltechauthors DR-0009,
+> plan phases 2 to 6); until they exist the files under `nginx/` are the
+> reference for what is deployed.
 
 ### Systemctl
 

@@ -7,8 +7,14 @@ numbers instead of from scratch. Add a new entry to the incident log at the
 bottom whenever a new bot or wave is investigated.
 
 Background: issue #168; the nginx changes (real client IP, extended log format,
-concurrency caps) are `nginx-cloudflare-real-ip.conf`,
-`nginx-log-format-bot-fingerprint.conf` and `nginx-concurrency-limits.conf`.
+concurrency caps, the IIIF cache) are `nginx/conf.d/cloudflare_real_ip.conf`,
+`nginx/conf.d/caltechauthors_log.conf`, `nginx/conf.d/caltechauthors_limits.conf`
+and `nginx/conf.d/caltechauthors_cache.conf`, with the site config in
+`nginx/sites-available/caltechauthors.conf`. **The dated incident entries below
+keep the file names they were written with** (`nginx-cloudflare-real-ip.conf`,
+`nginx-log-format-bot-fingerprint.conf`, `nginx-concurrency-limits.conf`,
+`nginx-iiif-cache.conf`, `nginx-caltechauthors.conf`); those files were moved and
+renamed on 2026-10-09 (caltechauthors DR-0009).
 
 ## What you need
 
@@ -19,7 +25,7 @@ concurrency caps) are `nginx-cloudflare-real-ip.conf`,
   `/var/log/nginx/access.log` and the newest rotated logs, prints one report,
   and changes nothing.
 - The extended log format
-  (`nginx-log-format-bot-fingerprint.conf`) for the fingerprint section.
+  (`nginx/conf.d/caltechauthors_log.conf`) for the fingerprint section.
   Lines written before 2026-10-06 ~23:00Z do not have it; that section skips
   them.
 - Logs are rotated daily and compressed; `-d 5` reads five files. Anything older

@@ -135,7 +135,7 @@ limit Cloudflare, not the harvester. Two ways to do this properly:
   }
   ```
 
-  This is an untested sketch for `nginx-caltechauthors.conf`; check it with
+  This is an untested sketch for `nginx/sites-available/caltechauthors.conf`; check it with
   `nginx -t`, and keep the Cloudflare list current.
 
 Do not block OAI-PMH wholesale: `ListRecords` is how legitimate aggregators and

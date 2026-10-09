@@ -12,7 +12,7 @@ non-campus /api, non-campus /api/iiif/ and campus /api:
   - the share of seconds with at least 2, 4, 6, 8, 12, 16, 20 and 24 in flight
 
 Use it to judge the concurrency caps (api_conc and iiif_conc in
-nginx-concurrency-limits.conf). Counts are measured behind the caps, so a value
+nginx/conf.d/caltechauthors_limits.conf). Counts are measured behind the caps, so a value
 that sits at a cap means the cap is binding. Only aggregates are printed, never an
 address, path or user agent. "Campus" is a client address in 131.215.0.0/16 (the
 exempt range); it needs the real-IP change so the client address is the visitor.

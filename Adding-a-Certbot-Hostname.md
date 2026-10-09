@@ -2,7 +2,15 @@
 Adding a new hostname with certbot
 ===================================
 
-`nginx-caltechauthors.conf`'s pattern for a real hostname puts everything in
+> **Partly superseded (caltechauthors DR-0009, 2026-10-09).** On a host whose
+> nginx configuration is deployed with `nginx-deploy.bash`, certificates are
+> obtained with `certbot certonly` and never `certbot --nginx`, and the site file
+> is a template that the script renders; certbot must not edit it. What follows
+> describes the older `certbot --nginx` flow and its redirect-loop gotcha, which
+> is still the right explanation of what goes wrong when certbot meets a bare
+> stub block. It is rewritten for the new flow when `docs/nginx.md` is written.
+
+`nginx/sites-available/caltechauthors.conf`'s pattern for a real hostname puts everything in
 **one** `server {}` block: the `location /`, `/api`, and `/static` proxying
 *and* the certbot-managed `ssl_certificate`/`ssl_certificate_key` lines, all
 together, keyed to that one `server_name`. That's deliberate, and it's easy
@@ -26,7 +34,7 @@ wrong with certbot itself.
 
 **Before running certbot for a new hostname**, give it a block that already
 has the same `location` blocks as the existing app-serving block --
-`nginx-caltechauthors.conf`'s `authors.library.caltech.edu` block is the
+`nginx/sites-available/caltechauthors.conf`'s `authors.library.caltech.edu` block is the
 reference to copy from, not a bare stub. Certbot will then append the cert
 directives to a block that already knows how to serve the app, instead of
 to an empty one.

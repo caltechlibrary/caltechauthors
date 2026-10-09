@@ -27,7 +27,7 @@
 # Environment: LOG_DIR (default /var/log/nginx), LOG_NAME (default access.log).
 #
 # The fingerprint section needs the caltechauthors_bots log format
-# (nginx-log-format-bot-fingerprint.conf); older lines are skipped there only.
+# (nginx/conf.d/caltechauthors_log.conf); older lines are skipped there only.
 # Select new-format lines by ' rt=[0-9.]+ urt=', never a bare 'rt=' (that also
 # matches 'sort=' in query strings).
 #

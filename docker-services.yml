@@ -19,13 +19,6 @@ services:
       - "INVENIO_SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://caltechauthors:caltechauthors@db/caltechauthors"
       - "INVENIO_WSGI_PROXIES=2"
       - "INVENIO_RATELIMIT_STORAGE_URL=redis://cache:6379/3"
-  frontend:
-    build: ./docker/nginx/
-    image: caltechauthors-frontend
-    restart: "unless-stopped"
-    ports:
-      - "80"
-      - "443"
   cache:
     image: redis:7
     restart: "unless-stopped"

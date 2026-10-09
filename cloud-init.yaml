@@ -562,7 +562,7 @@ write_files:
         # trailing-slash prefix-strip trick. With Granian owning the
         # strip there is nothing left to rewrite, so the capture group
         # is gone. Optional trailing /<part-number> and trailing slash
-        # match this repo's own nginx-caltechauthors.conf (multipart
+        # match this repo's own nginx/sites-available/caltechauthors.conf (multipart
         # file-content requests carry a numeric part suffix).
         location ~ ^/api/records/.+/draft/files/.+/content(?:/[0-9]+)?/?$ {
           gzip off;
@@ -575,9 +575,8 @@ write_files:
           proxy_hide_header X-User-ID;
           client_max_body_size 500G;
         }
-        # Static content served directly by nginx, matching this repo's
-        # own nginx-sites-enabled-default (path reflects uv's venv layout,
-        # not the old Pipenv virtualenvs path).
+        # Static content served directly by nginx (path reflects uv's venv
+        # layout, not the old Pipenv virtualenvs path).
         location /static {
           alias /Sites/${INSTANCE_NAME}/.venv/var/instance/static;
           autoindex off;

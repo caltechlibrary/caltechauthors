@@ -47,19 +47,6 @@ services:
     extends:
       file: docker-services.yml
       service: s3
-  # Frontend
-  frontend:
-    extends:
-      file: docker-services.yml
-      service: frontend
-    volumes:
-      - static_data:/opt/invenio/var/instance/static
-    depends_on:
-      - web-ui
-      - web-api
-    ports:
-      - "80:80"
-      - "443:443"
   # UI Application
   web-ui:
     extends:
