@@ -2,8 +2,16 @@
 # LOCAL MULTIPASS VARIANT of cloud-init.yaml -- byte-identical except for
 # this header. Launch with:
 #   multipass launch 24.04 --name caltechauthors-granian-test \
-#     --cpus 4 --memory 8G --disk 40G --cloud-init cloud-init-multipass.yaml
-# Reach the instance via `multipass shell` (or its `multipass info` IP)
+#     --cpus 4 --memory 16G --disk 40G --cloud-init cloud-init-multipass.yaml
+# MEMORY: 8G is NOT enough. docker-services.yml gives OpenSearch production's
+# 4 GB heap (-Xms4g -Xmx4g), and on an 8G VM the kernel OOM-kills it (exit 137,
+# a restart loop) so /api/records answers 500 (seen 2026-10-13). The stack on
+# the 32 GB AWS test instance (m7i-flex.2xlarge) used about 10 GB in use plus
+# page cache, so 16G is the recommendation; it was not itself tried on
+# Multipass. On a host that cannot give 16G, lower the heap in that VM's own
+# checkout (sed -i 's/-Xms4g -Xmx4g/-Xms1g -Xmx1g/' docker-services.yml) and
+# recreate the search container; never commit that change, it is production's
+# value. Reach the instance via `multipass shell` (or its `multipass info` IP)
 # instead of SSM/SSH-over-restricted-security-group. x86_64 vs arm64 here
 # just follows whatever this Mac natively runs (Multipass doesn't cross-
 # architecture-emulate) -- not a meaningful choice either way, since this
