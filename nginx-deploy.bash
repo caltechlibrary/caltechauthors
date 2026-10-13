@@ -5,13 +5,14 @@
 # caltechauthors DR-0009. Verbs: check, diff, apply, rollback. The repository's nginx/ tree
 # mirrors /etc/nginx; this script renders it for one host, tests the result on a STAGED copy
 # of the host's /etc/nginx before it copies anything, backs up what it replaces, and can put
-# the backup back. The packaged /etc/nginx/nginx.conf is never edited.
+# the backup back. The packaged /etc/nginx/nginx.conf is never edited, except that
+# --migrate-legacy puts the package's own file back over a hand-edited one.
 #
 # Written for bash 3.2 (macOS) and later.
 
 set -u
 
-VERSION=0.0.2
+VERSION=0.0.3
 PROG=nginx-deploy.bash
 
 # Exit codes, workspace DR-0014.
@@ -33,9 +34,9 @@ NAME
   nginx-deploy.bash - deploy the repository's nginx configuration to a host by copy
 
 SYNOPSIS
-  nginx-deploy.bash check    [OPTIONS]
+  nginx-deploy.bash check    [OPTIONS] [--migrate-legacy]
   nginx-deploy.bash diff     [OPTIONS]
-  nginx-deploy.bash apply    [OPTIONS] [--reload] [--yes]
+  nginx-deploy.bash apply    [OPTIONS] [--migrate-legacy] [--reload] [--yes]
   nginx-deploy.bash rollback [--etc-dir DIR] [--backup-dir DIR] [--reload] [STAMP]
   nginx-deploy.bash --help | --version
 
@@ -49,7 +50,8 @@ VERBS
   check     render, build a STAGED copy of the host's /etc/nginx with the rendered files laid
             over it, and test that copy with `nginx -t -c` and, if installed, `logagent check`;
             changes nothing on the host
-  diff      show the installed files against the rendered ones; exit 1 when they differ
+  diff      show the installed files against the rendered ones; exit 1 when they differ; a host
+            that still has the legacy configuration (see --migrate-legacy) is reported as drift
   apply     check, then back up what will be replaced, copy the rendered files, run `nginx -t`
             on the installed tree, and restore the backup if that fails. Reloads nginx only
             with --reload. Asks first unless --yes is given.
@@ -73,6 +75,16 @@ OPTIONS
   --logagent-config FILE logagent's host configuration (default: /etc/logagent/logagent.yaml)
   --require-logagent     a missing logagent is an error, not a skipped step
   --no-logagent          do not run logagent check
+  --migrate-legacy       check and apply: move a host that was configured by hand onto this layout.
+                         Such a host has an /etc/nginx/nginx.conf edited away from the nginx-common
+                         package's and/or the old top-level /etc/nginx/caltechauthors_log.conf, which
+                         would define log_format caltechauthors_bots a second time. Without this option
+                         check and apply refuse (exit 65) and say so. With it, the staged tree is built
+                         from the migrated state, apply backs both files up, replaces nginx.conf with the
+                         package's own (taken from the nginx-common .deb that apt-get downloads, and
+                         accepted only if its md5 is the one dpkg recorded) and removes the old log file;
+                         rollback undoes all of it. A host with nothing legacy is not touched, and the
+                         package system is not used.
   --reload               apply and rollback: reload nginx after a good test
   --yes                  apply: do not ask first (for installers)
   --keep-stage           keep the staged tree and print its path (for debugging)
@@ -82,18 +94,25 @@ ENVIRONMENT
   NGINX      the nginx program (default: nginx)
   LOGAGENT   the logagent program (default: logagent)
   SYSTEMCTL  the systemctl program, used by --reload (default: systemctl)
+  DPKG_QUERY the dpkg-query program, used to find out whether nginx.conf was modified (default: dpkg-query)
+  APT_GET    the apt-get program, used by --migrate-legacy to download nginx-common (default: apt-get)
+  DPKG_DEB   the dpkg-deb program, used by --migrate-legacy to read that package (default: dpkg-deb)
 
 EXIT STATUS
    0  success, or nothing to do
    1  the answer is no: diff found drift, or apply was declined
    2  usage: unknown verb or option, a missing or surplus argument, a bad value
   65  the configuration was rejected: nginx -t failed or logagent found a gap (before any
-      change, or after one that was then restored), or a token was left unreplaced
+      change, or after one that was then restored), a token was left unreplaced, the host has
+      legacy configuration and --migrate-legacy was not given, or the package's nginx.conf does
+      not match the checksum dpkg recorded
   66  a needed input is missing: nginx, systemctl with --reload, the repository's nginx/ tree,
-      the etc directory, a snippet or dhparam.pem it requires, a backup, or logagent with
-      --require-logagent
+      the etc directory, a snippet or dhparam.pem it requires, a backup, logagent with
+      --require-logagent, or (--migrate-legacy) dpkg-query unable to name the installed
+      nginx-common and its nginx.conf checksum
   69  --reload: systemctl could not reload nginx (the files are installed and nginx -t
-      passes; nginx keeps serving the previous configuration)
+      passes; nginx keeps serving the previous configuration); or --migrate-legacy: apt-get
+      could not download nginx-common (nothing was changed)
   70  an error nothing classified (a bug)
   73  the backup directory could not be made (nothing was changed)
   74  a copy failed part way (the backup was restored)
@@ -137,6 +156,7 @@ REQUIRE_LOGAGENT=0
 NO_LOGAGENT=0
 RELOAD=0
 YES=0
+MIGRATE=0
 
 need_value() { # need_value OPTION COUNT
   [ "$2" -ge 2 ] || usage_error "option $1 needs a value"
@@ -163,6 +183,7 @@ while [ $# -gt 0 ]; do
     --no-logagent) NO_LOGAGENT=1; shift ;;
     --reload) RELOAD=1; shift ;;
     --yes) YES=1; shift ;;
+    --migrate-legacy) MIGRATE=1; shift ;;
     --keep-stage) KEEP=1; shift ;;
     --) shift; while [ $# -gt 0 ]; do POS+=("$1"); shift; done; break ;;
     -*) usage_error "unknown option: $arg" ;;
@@ -187,6 +208,10 @@ case "$VERB" in
   check|diff) [ "$RELOAD" -eq 0 ] || usage_error "--reload only applies to apply and rollback" ;;
 esac
 [ "$VERB" = apply ] || [ "$YES" -eq 0 ] || usage_error "--yes only applies to apply"
+case "$VERB" in
+  check|apply) ;;
+  *) [ "$MIGRATE" -eq 0 ] || usage_error "--migrate-legacy only applies to check and apply" ;;
+esac
 
 # ---- validating the values ---------------------------------------------------
 
@@ -233,6 +258,10 @@ if [ "$VERB" != diff ]; then
     *) command -v "$NGINX_BIN" >/dev/null 2>&1 || die $EX_NOINPUT "nginx not found on PATH" ;;
   esac
 fi
+
+DPKG_QUERY_BIN=${DPKG_QUERY:-dpkg-query}
+APT_GET_BIN=${APT_GET:-apt-get}
+DPKG_DEB_BIN=${DPKG_DEB:-dpkg-deb}
 
 SYSTEMCTL_BIN=${SYSTEMCTL:-systemctl}
 if [ "$RELOAD" -eq 1 ]; then
@@ -314,6 +343,83 @@ render_all() {
   LINK_TARGET="$ETC_DIR/sites-available/$SITE_NAME.conf"
 }
 
+# ---- the legacy configuration (a host configured by hand before this script) ---
+
+LEGACY_LOG_REL=caltechauthors_log.conf
+LEG_CONF=0      # nginx.conf differs from the nginx-common package's
+LEG_LOG=0       # the old top-level log file exists
+STOCK_MD5=""    # the md5 dpkg recorded for the package's nginx.conf
+
+# md5_of FILE prints the file's md5 (md5sum on Linux, md5 on macOS).
+md5_of() {
+  if command -v md5sum >/dev/null 2>&1; then md5sum < "$1" | awk '{print $1}'; else md5 -q "$1"; fi
+}
+
+# detect_legacy sets LEG_CONF, LEG_LOG and STOCK_MD5. A modified nginx.conf is one whose md5 is not the
+# package's (the check dpkg --verify makes); where dpkg cannot say, the include of the old log file is
+# the one edit that can still be recognised.
+detect_legacy() {
+  LEG_CONF=0; LEG_LOG=0
+  [ ! -e "$ETC_DIR/$LEGACY_LOG_REL" ] || LEG_LOG=1
+  [ -f "$ETC_DIR/nginx.conf" ] || return 0
+  STOCK_MD5=$("$DPKG_QUERY_BIN" -W -f='${Conffiles}\n' nginx-common 2>/dev/null | awk '$1=="/etc/nginx/nginx.conf"{print $2; exit}')
+  if [ -n "$STOCK_MD5" ]; then
+    [ "$(md5_of "$ETC_DIR/nginx.conf")" = "$STOCK_MD5" ] || LEG_CONF=1
+  elif grep -q 'caltechauthors_log\.conf' "$ETC_DIR/nginx.conf"; then
+    LEG_CONF=1
+  fi
+}
+
+# refuse_legacy is exit 65: installing over legacy configuration would fail or double the log_format.
+refuse_legacy() {
+  {
+    echo "$PROG: this host has configuration from before this script:"
+    [ "$LEG_CONF" -ne 1 ] || echo "  $ETC_DIR/nginx.conf differs from the nginx-common package's (it was edited by hand)"
+    [ "$LEG_LOG" -ne 1 ] || echo "  $ETC_DIR/$LEGACY_LOG_REL is the old top-level log file; next to conf.d/caltechauthors_log.conf it defines log_format caltechauthors_bots twice"
+    echo "Nothing was changed. To migrate, repeat the command with --migrate-legacy: it backs up both files,"
+    echo "restores the package's nginx.conf, removes the old log file and installs; rollback undoes all of it."
+  } >&2
+  exit $EX_DATA
+}
+
+# fetch_stock puts the package's own nginx.conf at $RENDER/nginx.conf. It downloads the installed
+# version of nginx-common (apt-get download needs no root and changes nothing on the host), reads only
+# that file out of the .deb, and accepts it only if its md5 is the one dpkg recorded. (apt-get install
+# --reinstall --force-confnew does NOT do this: dpkg keeps a modified conffile when the package's
+# version has not changed. Rehearsed on the Multipass VM, 2026-10-13.)
+fetch_stock() {
+  local ver deb got
+  [ -n "$STOCK_MD5" ] || die $EX_NOINPUT "cannot restore the package's nginx.conf: dpkg-query ($DPKG_QUERY_BIN) cannot say which nginx.conf checksum the nginx-common package has"
+  ver=$("$DPKG_QUERY_BIN" -W -f='${Version}' nginx-common 2>/dev/null)
+  [ -n "$ver" ] || die $EX_NOINPUT "cannot restore the package's nginx.conf: dpkg-query ($DPKG_QUERY_BIN) cannot say which version of nginx-common is installed"
+  mkdir -p "$WORK/pkg" || die $EX_IOERR "could not make $WORK/pkg"
+  if ! ( cd "$WORK/pkg" && "$APT_GET_BIN" download "nginx-common=$ver" ) > "$WORK/apt.out" 2>&1; then
+    cat "$WORK/apt.out" >&2
+    die $EX_UNAVAILABLE "apt-get could not download nginx-common=$ver; nothing was changed"
+  fi
+  deb=$(ls "$WORK"/pkg/nginx-common_*.deb 2>/dev/null | head -1)
+  [ -n "$deb" ] || die $EX_UNAVAILABLE "apt-get download left no .deb for nginx-common=$ver; nothing was changed"
+  "$DPKG_DEB_BIN" --fsys-tarfile "$deb" 2>/dev/null | tar -xO ./etc/nginx/nginx.conf > "$RENDER/nginx.conf" 2>/dev/null
+  got=$(md5_of "$RENDER/nginx.conf")
+  [ "$got" = "$STOCK_MD5" ] || die $EX_DATA "the nginx.conf in the downloaded nginx-common=$ver has md5 $got, but dpkg recorded md5 $STOCK_MD5; nothing was changed"
+}
+
+# prepare_legacy is run by check and apply after render_all. It refuses a legacy host unless
+# --migrate-legacy was given, and then makes the package's nginx.conf one of the managed files.
+prepare_legacy() {
+  detect_legacy
+  [ "$LEG_CONF" -eq 1 ] || [ "$LEG_LOG" -eq 1 ] || return 0
+  [ "$MIGRATE" -eq 1 ] || refuse_legacy
+  if [ "$LEG_CONF" -eq 1 ]; then
+    fetch_stock
+    MANAGED+=("nginx.conf")
+    echo "legacy: $ETC_DIR/nginx.conf differs from the package's; it will be replaced by the package's own"
+  fi
+  if [ "$LEG_LOG" -eq 1 ]; then
+    echo "legacy: $ETC_DIR/$LEGACY_LOG_REL is the old top-level log file; it will be removed"
+  fi
+}
+
 # ---- the staged tree and its gates (check, and the start of apply) -------------
 
 STAGE=$WORK/stage
@@ -336,6 +442,8 @@ build_stage() {
     mkdir -p "$(dirname "$STAGE/$rel")" && ln -sfn "$(readlink "$l")" "$STAGE/$rel"
   done
   mkdir -p "$STAGE/conf.d" "$STAGE/sites-available" "$STAGE/sites-enabled" "$STAGE/snippets"
+  # what a migration removes is not in the stage, so the stage is the tree apply will leave behind
+  if [ "$MIGRATE" -eq 1 ] && [ "$LEG_LOG" -eq 1 ]; then rm -f "$STAGE/$LEGACY_LOG_REL"; fi
   for rel in "${MANAGED[@]}"; do
     cp "$RENDER/$rel" "$STAGE/$rel" || die $EX_IOERR "could not stage $rel"
   done
@@ -425,6 +533,10 @@ plan_changes() {
     CHG_REL+=("$LINK_REL"); CHG_KIND+=(link-created); CHG_OLD+=("")
     REPORT="$REPORT"$'missing  '"$LINK_REL"$'\n'
   fi
+  if [ "$MIGRATE" -eq 1 ] && [ "$LEG_LOG" -eq 1 ]; then
+    CHG_REL+=("$LEGACY_LOG_REL"); CHG_KIND+=(removed); CHG_OLD+=("")
+    REPORT="$REPORT"$'legacy  '"$LEGACY_LOG_REL"$' (to be removed)\n'
+  fi
 }
 
 # ---- restoring from a backup (apply's failure path, and rollback) ---------------
@@ -436,6 +548,8 @@ restore_backup() {
     case "$kind" in
       replaced)
         rm -f "$ETC_DIR/$rel" && cp -p "$bk/files/$rel" "$ETC_DIR/$rel" || { echo "$PROG: could not restore $rel" >&2; bad=1; } ;;
+      removed)
+        cp -p "$bk/files/$rel" "$ETC_DIR/$rel" || { echo "$PROG: could not restore $rel" >&2; bad=1; } ;;
       created|link-created)
         rm -f "$ETC_DIR/$rel" || { echo "$PROG: could not remove $rel" >&2; bad=1; } ;;
       link-replaced)
@@ -458,6 +572,7 @@ reload_nginx() {
 
 verb_check() {
   render_all
+  prepare_legacy
   build_stage
   run_gates
   echo "check: the staged configuration for $SERVER_NAME passed; nothing was changed on this host"
@@ -466,17 +581,28 @@ verb_check() {
 verb_diff() {
   render_all
   plan_changes
+  detect_legacy
+  local nleg=0
+  if [ "$LEG_CONF" -eq 1 ]; then
+    REPORT="$REPORT"$'legacy  nginx.conf (differs from the nginx-common package\'s; --migrate-legacy restores the package\'s)\n'
+    nleg=$((nleg+1))
+  fi
+  if [ "$LEG_LOG" -eq 1 ]; then
+    REPORT="$REPORT"$'legacy  '"$LEGACY_LOG_REL"$' (the old top-level log file; --migrate-legacy removes it)\n'
+    nleg=$((nleg+1))
+  fi
   printf '%s' "$REPORT"
-  if [ ${#CHG_REL[@]} -eq 0 ]; then
+  if [ ${#CHG_REL[@]} -eq 0 ] && [ "$nleg" -eq 0 ]; then
     echo "no drift: the installed files match the repository's"
     exit $EX_OK
   fi
-  echo "drift: ${#CHG_REL[@]} of $(( ${#MANAGED[@]} + 1 )) managed items differ or are missing"
+  echo "drift: $(( ${#CHG_REL[@]} + nleg )) item(s) differ, are missing or are legacy ($nleg legacy)"
   exit $EX_NEGATIVE
 }
 
 verb_apply() {
   render_all
+  prepare_legacy
   build_stage
   run_gates
   plan_changes
@@ -519,6 +645,9 @@ verb_apply() {
       replaced)
         mkdir -p "$(dirname "$bk/files/$rel")" && cp -p "$ETC_DIR/$rel" "$bk/files/$rel" || die $EX_CANTCREAT "could not back up $rel; nothing was changed"
         echo "replaced $rel" >> "$bk/MANIFEST" ;;
+      removed)
+        mkdir -p "$(dirname "$bk/files/$rel")" && cp -p "$ETC_DIR/$rel" "$bk/files/$rel" || die $EX_CANTCREAT "could not back up $rel; nothing was changed"
+        echo "removed $rel" >> "$bk/MANIFEST" ;;
       created) echo "created $rel" >> "$bk/MANIFEST" ;;
       link-created) echo "link-created $rel" >> "$bk/MANIFEST" ;;
       link-replaced) echo "link-replaced $rel ${CHG_OLD[$i]}" >> "$bk/MANIFEST" ;;
@@ -543,6 +672,8 @@ verb_apply() {
           && install -m 0644 $OWNER "$RENDER/$rel" "$ETC_DIR/$rel.nginx-deploy.new" 2>/dev/null \
           && mv -f "$ETC_DIR/$rel.nginx-deploy.new" "$ETC_DIR/$rel" 2>/dev/null \
           || { rm -f "$ETC_DIR/$rel.nginx-deploy.new"; fail_and_restore $EX_IOERR "could not install $rel."; } ;;
+      removed)
+        rm -f "$ETC_DIR/$LEGACY_LOG_REL" 2>/dev/null || fail_and_restore $EX_IOERR "could not remove $rel." ;;
       link-created|link-replaced)
         install -d -m 0755 $OWNER "$(dirname "$ETC_DIR/$rel")" 2>/dev/null \
           && ln -sfn "$LINK_TARGET" "$ETC_DIR/$rel" 2>/dev/null \

@@ -61,6 +61,13 @@ if [ ! -f "$conf" ]; then echo "nginx: [emerg] open() \"$conf\" failed (2: No su
 cdir=$(dirname "$conf")
 # the real nginx creates proxy_cache_path directories, last component only, even under -t
 dir=$(cat "$cdir"/conf.d/*.conf 2>/dev/null | grep -E '^[[:space:]]*proxy_cache_path[[:space:]]' | head -1 | awk '{print $2}')
+# a log_format name defined twice is an emergency, as in the real nginx (the legacy top-level
+# caltechauthors_log.conf plus conf.d/caltechauthors_log.conf is exactly that)
+nfmt=$(cat "$cdir"/conf.d/*.conf "$cdir"/caltechauthors_log.conf 2>/dev/null | grep -c '^log_format caltechauthors_bots')
+if [ "$nfmt" -gt 1 ]; then
+  echo "nginx: [emerg] duplicate \"log_format\" name \"caltechauthors_bots\"" >&2
+  echo "nginx: configuration file $conf test failed" >&2; exit 1
+fi
 if [ -n "$dir" ]; then
   [ -d "$dir" ] || mkdir "$dir" 2>/dev/null || { echo "nginx: [emerg] mkdir() \"$dir\" failed (2: No such file or directory)" >&2
     echo "nginx: configuration file $conf test failed" >&2; exit 1; }
@@ -113,6 +120,36 @@ EOS
 if [ -n "${STUB_DATE:-}" ]; then echo "$STUB_DATE"; exit 0; fi
 exec "$(PATH=/usr/bin:/bin command -v date)" "$@"
 EOS
+  # the nginx-common package, as the stubs below present it: its nginx.conf is this fixture's own
+  # (so an untouched fixture is a stock host), and dpkg records that file's md5
+  mkdir -p "$CASE_DIR/pkg/etc/nginx"
+  cp "$CASE_DIR/etc/nginx.conf" "$CASE_DIR/pkg/etc/nginx/nginx.conf"
+  cat > "$CASE_DIR/bin/dpkg-query" <<'EOS'
+#!/bin/bash
+echo "dpkg-query $*" >> "$STUB_LOG"
+if [ -n "${STUB_DPKG_ABSENT:-}" ]; then echo "dpkg-query: no packages found matching nginx-common" >&2; exit 1; fi
+case "$*" in
+  *Conffiles*)
+    if command -v md5sum >/dev/null 2>&1; then m=$(md5sum < "$STUB_PKG/etc/nginx/nginx.conf" | awk '{print $1}'); else m=$(md5 -q "$STUB_PKG/etc/nginx/nginx.conf"); fi
+    printf ' /etc/nginx/nginx.conf %s\n /etc/nginx/mime.types 0000\n' "$m" ;;
+  *Version*) printf '1.24.0-2ubuntu7.18' ;;
+esac
+EOS
+  cat > "$CASE_DIR/bin/apt-get" <<'EOS'
+#!/bin/bash
+echo "apt-get $*" >> "$STUB_LOG"
+if [ -n "${STUB_APT_RC:-}" ]; then echo "E: Unable to locate package nginx-common" >&2; exit "$STUB_APT_RC"; fi
+[ "${1:-}" = download ] && : > "nginx-common_${2#*=}_all.deb"
+exit 0
+EOS
+  cat > "$CASE_DIR/bin/dpkg-deb" <<'EOS'
+#!/bin/bash
+echo "dpkg-deb $*" >> "$STUB_LOG"
+d=$(mktemp -d); mkdir -p "$d/etc/nginx"; cp "$STUB_PKG/etc/nginx/nginx.conf" "$d/etc/nginx/nginx.conf"
+[ -z "${STUB_PKG_TAMPER:-}" ] || echo "# not the package's file" >> "$d/etc/nginx/nginx.conf"
+tar -cf - -C "$d" ./etc/nginx/nginx.conf; rc=$?; rm -rf "$d"; exit $rc
+EOS
+  chmod +x "$CASE_DIR/bin/dpkg-query" "$CASE_DIR/bin/apt-get" "$CASE_DIR/bin/dpkg-deb"
   chmod +x "$CASE_DIR/bin/nginx" "$CASE_DIR/bin/logagent" "$CASE_DIR/bin/systemctl" "$CASE_DIR/bin/install" "$CASE_DIR/bin/date"
   echo "version: 1" > "$CASE_DIR/logagent.yaml"
 }
@@ -127,6 +164,7 @@ run() {
   # the script's temporary directory is inside the case, so a kept stage is removed with it
   mkdir -p "$CASE_DIR/tmp"
   OUT=$(env STUB_LOG="$CASE_DIR/stub.log" NGINX="$CASE_DIR/bin/nginx" LOGAGENT="$CASE_DIR/bin/logagent" SYSTEMCTL="$CASE_DIR/bin/systemctl" STUB_ETC="$CASE_DIR/etc" TMPDIR="$CASE_DIR/tmp" \
+    DPKG_QUERY="$CASE_DIR/bin/dpkg-query" APT_GET="$CASE_DIR/bin/apt-get" DPKG_DEB="$CASE_DIR/bin/dpkg-deb" STUB_PKG="$CASE_DIR/pkg" \
     ${envs[@]+"${envs[@]}"} "$SCRIPT" "$@" 2> "$CASE_DIR/err" <<<"${RUN_STDIN:-}")
   RC=$?
   ERR=$(cat "$CASE_DIR/err")
@@ -152,6 +190,21 @@ n_backups() { ls -1 "$CASE_DIR/backups" 2>/dev/null | wc -l | tr -d ' '; }
 latest_backup() { ls -1 "$CASE_DIR/backups" | sort | tail -1 | sed "s#^#$CASE_DIR/backups/#"; }
 # apply_ok applies with --yes and fails the test if it does not succeed.
 apply_ok() { run -- $(stdv apply) --yes --no-logagent "$@"; eq "$RC" 0 "apply (stderr: $ERR)"; }
+
+# make_legacy turns the fixture into what production was: an nginx.conf edited by hand to include the
+# top-level log file, and that file, which carries its own log_format and access_log.
+make_legacy() {
+  {
+    cat "$CASE_DIR/pkg/etc/nginx/nginx.conf"
+    echo "# hand edit: error_log warn"
+    echo "include $CASE_DIR/etc/caltechauthors_log.conf;"
+  } > "$CASE_DIR/etc/nginx.conf"
+  printf 'log_format caltechauthors_bots '"'"'$remote_addr'"'"';\naccess_log /var/log/nginx/access.log caltechauthors_bots;\n' > "$CASE_DIR/etc/caltechauthors_log.conf"
+}
+# migrate_ok applies with --migrate-legacy and fails the test if it does not succeed.
+migrate_ok() { run -- $(stdv apply) --yes --no-logagent --migrate-legacy "$@"; eq "$RC" 0 "apply --migrate-legacy (stderr: $ERR)"; }
+# downloads counts the package downloads the stubs saw.
+downloads() { grep -c '^apt-get download' "$CASE_DIR/stub.log"; }
 
 # tree_sig DIR prints a signature of every file and link under DIR.
 tree_sig() {
@@ -604,6 +657,140 @@ t_rollback_refuses_another_etc_dir() {
 }
 t_rollback_survives_files_that_are_already_gone() {
   new_case $FUNCNAME; apply_ok; rm "$CASE_DIR/etc/conf.d/caltechauthors_cache.conf"; run -- $(stdr); eq "$RC" 0 "exit (stderr: $ERR)"
+}
+
+# ---- phase 4: legacy migration ----------------------------------------------
+
+t_apply_refuses_a_modified_nginx_conf() {
+  new_case $FUNCNAME; echo "# some hand edit" >> "$CASE_DIR/etc/nginx.conf"
+  local before; before=$(tree_sig "$CASE_DIR/etc")
+  run -- $(stdv apply) --yes --no-logagent
+  eq "$RC" 65 "exit"; has "$ERR" "nginx.conf" "names the modified file"; has "$ERR" "--migrate-legacy" "prints the way forward"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "nothing changed"; eq "$(n_backups)" 0 "no backup was made"
+}
+t_apply_refuses_the_legacy_log_file() {
+  new_case $FUNCNAME; echo "log_format caltechauthors_bots '\$remote_addr';" > "$CASE_DIR/etc/caltechauthors_log.conf"
+  local before; before=$(tree_sig "$CASE_DIR/etc")
+  run -- $(stdv apply) --yes --no-logagent
+  eq "$RC" 65 "exit"; has "$ERR" "caltechauthors_log.conf" "names the legacy file"; has "$ERR" "--migrate-legacy" "prints the way forward"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "nothing changed"
+}
+t_check_refuses_legacy_too() {
+  new_case $FUNCNAME; make_legacy
+  run -- $(std) --no-logagent
+  eq "$RC" 65 "exit"; has "$ERR" "--migrate-legacy" "prints the way forward"
+  eq "$(grep -c '^nginx ' "$CASE_DIR/stub.log")" 0 "refused before nginx ran"
+}
+t_a_host_with_no_legacy_never_touches_the_package_system() {
+  new_case $FUNCNAME; migrate_ok
+  eq "$(downloads)" 0 "no download"; eq "$(grep -c '^dpkg-deb' "$CASE_DIR/stub.log")" 0 "no extraction"
+}
+t_migrate_restores_the_stock_nginx_conf_and_removes_the_legacy_file() {
+  new_case $FUNCNAME; make_legacy
+  migrate_ok
+  cmp -s "$CASE_DIR/etc/nginx.conf" "$CASE_DIR/pkg/etc/nginx/nginx.conf" || fail "nginx.conf is not the package's file"
+  absent "$CASE_DIR/etc/caltechauthors_log.conf" "the legacy log file is gone"
+  exists "$CASE_DIR/etc/conf.d/caltechauthors_log.conf" "the new log_format file is installed"
+  exists "$CASE_DIR/etc/sites-available/caltechauthors.conf" "the site is installed"
+  eq "$(downloads)" 1 "one download"; has "$(grep '^apt-get' "$CASE_DIR/stub.log")" "nginx-common=1.24.0-2ubuntu7.18" "the installed version is the one fetched"
+  has "$OUT" "legacy" "says what it did"
+}
+t_migrate_downloads_the_package_but_installs_only_nginx_conf() {
+  new_case $FUNCNAME; make_legacy; echo "# mine" > "$CASE_DIR/etc/mime.types"
+  migrate_ok
+  eq "$(cat "$CASE_DIR/etc/mime.types")" "# mine" "another file of the package is untouched"
+  has "$(cat "$CASE_DIR/stub.log")" "dpkg-deb --fsys-tarfile" "reads the package with dpkg-deb"
+  hasnt "$(cat "$CASE_DIR/stub.log")" "apt-get install" "never reinstalls the package"
+}
+t_migrate_stages_the_migrated_tree() {
+  # the legacy file plus conf.d/caltechauthors_log.conf is a duplicate log_format, which the stub nginx
+  # rejects: check --migrate-legacy passing proves the staged tree already has the legacy file gone
+  new_case $FUNCNAME; make_legacy
+  local before; before=$(tree_sig "$CASE_DIR/etc")
+  run -- $(std) --no-logagent --migrate-legacy --keep-stage
+  eq "$RC" 0 "exit (stderr: $ERR)"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "check changed nothing on the host"
+  local st; st=$(staged_dir)
+  absent "$st/caltechauthors_log.conf" "the legacy file is not in the stage"
+  if grep -q 'hand edit' "$st/nginx.conf"; then fail "the stage still has the hand-edited nginx.conf"; fi
+  eq "$(downloads)" 1 "check fetched the stock file to stage it"
+}
+t_migrate_backs_up_both_and_rollback_undoes_all() {
+  new_case $FUNCNAME; make_legacy
+  local before; before=$(tree_sig "$CASE_DIR/etc")
+  migrate_ok
+  local bk; bk=$(latest_backup)
+  exists "$bk/files/nginx.conf" "nginx.conf was backed up"; exists "$bk/files/caltechauthors_log.conf" "the legacy file was backed up"
+  has "$(cat "$bk/MANIFEST")" "replaced nginx.conf" "manifest: nginx.conf"; has "$(cat "$bk/MANIFEST")" "removed caltechauthors_log.conf" "manifest: the removal"
+  run -- $(stdr); eq "$RC" 0 "rollback (stderr: $ERR)"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "rollback restored the whole tree byte for byte"
+}
+t_migrate_is_repeatable() {
+  new_case $FUNCNAME; make_legacy; migrate_ok
+  local sig; sig=$(tree_sig "$CASE_DIR/etc")
+  run -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 0 "second run"; has "$OUT" "no change" "says nothing to do"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$sig" "nothing changed"; eq "$(n_backups)" 1 "no second backup"; eq "$(downloads)" 1 "no second download"
+}
+t_migrate_with_only_the_legacy_log_file() {
+  new_case $FUNCNAME; echo "log_format caltechauthors_bots '\$remote_addr';" > "$CASE_DIR/etc/caltechauthors_log.conf"
+  migrate_ok
+  absent "$CASE_DIR/etc/caltechauthors_log.conf" "the legacy file is gone"; eq "$(downloads)" 0 "a stock nginx.conf needs no download"
+  has "$(cat "$(latest_backup)/MANIFEST")" "removed caltechauthors_log.conf" "manifest"; hasnt "$(cat "$(latest_backup)/MANIFEST")" "replaced nginx.conf" "nginx.conf untouched"
+}
+t_migrate_with_only_a_modified_nginx_conf() {
+  new_case $FUNCNAME; echo "# a hand edit" >> "$CASE_DIR/etc/nginx.conf"
+  migrate_ok
+  cmp -s "$CASE_DIR/etc/nginx.conf" "$CASE_DIR/pkg/etc/nginx/nginx.conf" || fail "nginx.conf is not the package's file"
+  hasnt "$(cat "$(latest_backup)/MANIFEST")" "removed" "no removal"
+}
+t_a_failed_download_is_unavailable_and_changes_nothing() {
+  new_case $FUNCNAME; make_legacy; local before; before=$(tree_sig "$CASE_DIR/etc")
+  run STUB_APT_RC=100 -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 69 "exit"; has "$ERR" "nginx-common" "names the package"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "nothing changed"; eq "$(n_backups)" 0 "no backup"
+}
+t_a_package_file_that_does_not_match_dpkg_is_wrong_data() {
+  new_case $FUNCNAME; make_legacy; local before; before=$(tree_sig "$CASE_DIR/etc")
+  run STUB_PKG_TAMPER=1 -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 65 "exit"; has "$ERR" "md5" "says the checksum differs"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "nothing changed"
+}
+t_without_dpkg_the_stock_file_cannot_be_obtained() {
+  new_case $FUNCNAME; make_legacy; local before; before=$(tree_sig "$CASE_DIR/etc")
+  run STUB_DPKG_ABSENT=1 -- $(stdv apply) --yes --no-logagent
+  eq "$RC" 65 "still refused: the include of the legacy file is visible without dpkg"
+  run STUB_DPKG_ABSENT=1 -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 66 "exit"; has "$ERR" "dpkg" "says why"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "nothing changed"
+}
+t_a_failed_installed_test_restores_the_migration() {
+  new_case $FUNCNAME; make_legacy; local before; before=$(tree_sig "$CASE_DIR/etc")
+  run STUB_NGINX_INSTALLED_RC=1 -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 65 "exit"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the legacy host is back, byte for byte"
+}
+t_a_copy_that_fails_part_way_restores_the_migration() {
+  new_case $FUNCNAME; make_legacy; local before; before=$(tree_sig "$CASE_DIR/etc")
+  run PATH="$CASE_DIR/bin:$PATH" STUB_INSTALL_FAIL_ON="/nginx.conf.nginx-deploy.new" -- $(stdv apply) --yes --no-logagent --migrate-legacy
+  eq "$RC" 74 "exit"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the legacy host is back, byte for byte"
+}
+t_migrate_legacy_is_for_check_and_apply_only() {
+  new_case $FUNCNAME
+  run -- $(stdv diff) --migrate-legacy; eq "$RC" 2 "diff"
+  run -- $(stdr) --migrate-legacy; eq "$RC" 2 "rollback"
+}
+t_diff_reports_legacy_items_as_drift() {
+  new_case $FUNCNAME; apply_ok
+  run -- $(stdv diff); eq "$RC" 0 "no drift before"
+  make_legacy
+  run -- $(stdv diff); eq "$RC" 1 "drift"; has "$OUT" "legacy  nginx.conf" "reports the modified nginx.conf"
+  has "$OUT" "legacy  caltechauthors_log.conf" "reports the legacy file"
+}
+t_help_describes_migrate_legacy() {
+  new_case $FUNCNAME; run -- --help
+  has "$OUT" "--migrate-legacy" "the option"; has "$OUT" "DPKG_QUERY" "the environment variables"; has "$OUT" "APT_GET" "apt-get"
 }
 
 # ---- the runner -------------------------------------------------------------
