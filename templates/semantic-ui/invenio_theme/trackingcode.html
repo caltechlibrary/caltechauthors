@@ -16,11 +16,12 @@
  <script
   src="https://js.sentry-cdn.com/35c45ff156d7e7423e08f94106d0e066.min.js"
   crossorigin="anonymous"
+  data-lazy="no"
 ></script>
 <script>
   window.sentryOnLoad = function () {
     Sentry.init({
-      allowUrls: [/data\.caltech\.edu/],
+      allowUrls: [/authors\.library\.caltech\.edu/, /authors\.caltechlibrary\.dev/],
     });
     Sentry.lazyLoadIntegration("httpClientIntegration").then(function (integration) {
       Sentry.addIntegration(integration({ failedRequestStatusCodes: [403, 429, [500, 599]] }));
