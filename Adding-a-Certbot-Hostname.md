@@ -1,51 +1,67 @@
+Adding a hostname with certbot
+==============================
 
-Adding a new hostname with certbot
-===================================
+This page is for developers running a test instance, and for other institutions adapting this code. Certbot is
+a convenience for them: it gets a Let's Encrypt certificate for a hostname so the instance can serve HTTPS.
+`nginx-deploy.bash` only needs the certificate pair to exist; how it got there is up to the host (see
+`docs/nginx.md`). If your certificates come from somewhere else, put the pair where `--tls letsencrypt` expects
+it, or ask for a new `--tls` value (the vocabulary is closed on purpose, caltechauthors DR-0009).
 
-> **Partly superseded (caltechauthors DR-0009, 2026-10-09).** On a host whose
-> nginx configuration is deployed with `nginx-deploy.bash`, certificates are
-> obtained with `certbot certonly` and never `certbot --nginx`, and the site file
-> is a template that the script renders; certbot must not edit it. What follows
-> describes the older `certbot --nginx` flow and its redirect-loop gotcha, which
-> is still the right explanation of what goes wrong when certbot meets a bare
-> stub block. It is rewritten for the new flow when `docs/nginx.md` is written.
+The one rule: **use `certbot certonly`, never `certbot --nginx`**, on a host `nginx-deploy.bash` manages. The
+site file is a template the script renders, and the next deployment would remove or duplicate anything certbot
+put into it. The reason is at the end of this page.
 
-`nginx/sites-available/caltechauthors.conf`'s pattern for a real hostname puts everything in
-**one** `server {}` block: the `location /`, `/api`, and `/static` proxying
-*and* the certbot-managed `ssl_certificate`/`ssl_certificate_key` lines, all
-together, keyed to that one `server_name`. That's deliberate, and it's easy
-to get wrong when adding a hostname by hand.
+Steps
+-----
 
-**The gotcha:** certbot's nginx plugin only *finds* an existing `server {}`
-block matching the `server_name` you give it and *appends* the
-`listen 443 ssl` + cert directives to that same block -- it never copies in
-any proxy/location config, and it never creates a new app-serving block for
-you. If the block it finds is a bare redirect stub (e.g. something added
-just so certbot has a `server_name` to attach to: `server_name
-new.example.dev; return 301 https://$host$request_uri;`, with no
-`location` blocks in it at all), the result after certbot runs is a
-cert-bearing `server {}` block whose entire body is still just that
-redirect -- to itself. Any HTTPS request for that hostname matches this
-block (a specific `server_name` beats the generic `server_name _;`
-catch-all every other hostname/IP request lands on) and 301s to the exact
-URL it was already given: an infinite redirect loop, invisible in
-`nginx -t` (it's syntactically valid) and easy to mistake for something
-wrong with certbot itself.
+1. **DNS.** Point an `A` record for the new name at the instance, and let it propagate. Let's Encrypt connects to
+   the name on port 80.
 
-**Before running certbot for a new hostname**, give it a block that already
-has the same `location` blocks as the existing app-serving block --
-`nginx/sites-available/caltechauthors.conf`'s `authors.library.caltech.edu` block is the
-reference to copy from, not a bare stub. Certbot will then append the cert
-directives to a block that already knows how to serve the app, instead of
-to an empty one.
+2. **Get the certificate.** The site's port-80 server only redirects to HTTPS, and the application would not
+   answer a challenge file, so use certbot's own web server and stop nginx around it:
 
-If this happens after the fact (cert already issued, hostname already
-looping): keep the certbot-managed `listen`/`ssl_certificate*` lines as-is
-and add the missing `location` blocks (copied from the existing
-app-serving block) into the same `server {}` -- don't touch the separate
-port-80 redirect block certbot also created, that part is normal and
-correct.
+   ```shell
+   sudo certbot certonly --standalone -d new.example.dev \
+     --pre-hook "systemctl stop nginx" --post-hook "systemctl start nginx"
+   ```
 
-Hit live 2026-09-28 on `caltechauthors-test-v13` after adding
-`authors.caltechlibrary.dev` for certbot -- fixed the same way described
-above.
+   nginx is down for the few seconds this takes, which is fine on a test instance. The hooks are saved in
+   the certificate's renewal configuration, so `certbot renew` does the same thing later and nginx starts again
+   on the renewed certificate. (A DNS challenge avoids the downtime if your DNS has a certbot plugin.)
+   `certbot --nginx`, and `certbot certonly --nginx`, edit the site file even if only for the challenge.
+
+3. **Deploy with that certificate.** The certificate lineage is named after the first `-d` name unless you gave
+   `--cert-name`:
+
+   ```shell
+   sudo ./nginx-deploy.bash check  --server-name new.example.dev --tls letsencrypt
+   sudo ./nginx-deploy.bash apply  --server-name new.example.dev --tls letsencrypt --reload
+   ```
+
+   Add `--cert-name NAME` to both if the lineage has another name. `check` tests a staged copy first and changes
+   nothing. A host serves one hostname from this layout, so this *replaces* the name the site answered to
+   before; see "Changing the hostname" in `docs/nginx.md`.
+
+4. **Look.** `curl -sI http://new.example.dev/` should answer `301` to `https://new.example.dev/`, and
+   `curl -sI https://new.example.dev/` should answer from the application, not redirect again.
+   `sudo certbot certificates` shows the expiry and that renewal is configured.
+
+Why not `certbot --nginx`
+-------------------------
+
+The nginx plugin finds an existing `server {}` block that matches the name and **appends** the
+`listen 443 ssl` and certificate lines to it. It never copies in any `location` blocks. If the block it finds is
+a bare redirect stub (something added only so certbot has a `server_name` to attach to:
+`server_name new.example.dev; return 301 https://$host$request_uri;`), the result is a certificate-bearing block
+whose whole body is that redirect, to itself. Every HTTPS request for the name matches it, because a specific
+`server_name` beats the `_` catch-all, and gets a `301` to the URL it already asked for: an infinite redirect
+loop. `nginx -t` passes, since the file is valid, and it is easy to blame certbot.
+
+This was hit live on 2026-09-28 on `caltechauthors-test-v13` after adding `authors.caltechlibrary.dev`.
+It was fixed by keeping the certbot-added `listen` and `ssl_certificate*` lines and copying the missing
+`location` blocks from the app-serving block into the same `server {}`.
+
+With `nginx-deploy.bash` the stub never exists: the site file is one `server` block with its `location`
+blocks, and the certificate is a separate snippet the script includes. If you do not use the script and still run
+`certbot --nginx`, give it a block that already has the `location` blocks to attach to, and leave the separate
+port-80 redirect block it creates alone; that part is normal.

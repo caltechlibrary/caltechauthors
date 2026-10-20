@@ -90,11 +90,10 @@ AWS instance.
 Install the nginx configuration with `nginx-deploy.bash` (see `docs/nginx.md`).
 It renders `nginx/` for the host, checks it with `nginx -t` and `logagent check`
 before copying anything, and leaves the packaged `/etc/nginx/nginx.conf` alone.
-Obtain the certificate with `sudo certbot certonly`, not `certbot --nginx`.
-
-> The script and `docs/nginx.md` are not written yet (caltechauthors DR-0009,
-> plan phases 2 to 6); until they exist the files under `nginx/` are the
-> reference for what is deployed.
+For a Let's Encrypt certificate on a test instance see `Adding-a-Certbot-Hostname.md` (`certbot certonly`, never
+`certbot --nginx`).
+`docs/nginx.md` covers the verbs, rolling back, migrating a host that was configured by hand,
+the IIIF cache and refreshing the Cloudflare address list.
 
 ### Systemctl
 
