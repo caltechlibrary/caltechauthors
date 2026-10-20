@@ -793,6 +793,44 @@ t_help_describes_migrate_legacy() {
   has "$OUT" "--migrate-legacy" "the option"; has "$OUT" "DPKG_QUERY" "the environment variables"; has "$OUT" "APT_GET" "apt-get"
 }
 
+# ---- Cache-Control for authenticated IIIF responses (2026-10-20) -------------
+# RDM sends "Cache-Control: public" on IIIF images whether or not the record is restricted, so a shared
+# cache could keep a permitted reader's response. Responses the application marked as authenticated
+# (X-User-ID) get "private, no-store" instead; anonymous ones keep the application's own header.
+
+# iiif_block prints the staged site file's "location ^~ /api/iiif/" block, to its closing brace.
+iiif_block() {
+  awk '/^  location \^~ \/api\/iiif\/ \{/ {on=1} on {print} on && /^  }/ {exit}' "$1/sites-available/caltechauthors.conf"
+}
+t_authenticated_iiif_responses_are_private_and_not_stored() {
+  new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit (stderr: $ERR)"
+  local s site blk; s=$(staged_dir); site=$(cat "$s/sites-available/caltechauthors.conf"); blk=$(iiif_block "$s")
+  has "$site" 'map $upstream_http_x_user_id $iiif_cache_control {' "the map"
+  has "$site" '  default "private, no-store";' "authenticated responses get private, no-store (the map's default, not a comment)"
+  has "$site" '$upstream_http_cache_control;' "anonymous responses keep the application's header"
+  has "$blk" 'proxy_hide_header Cache-Control;' "the application's header is hidden, so the client gets one"
+  has "$blk" 'add_header Cache-Control $iiif_cache_control always;' "the chosen header is sent, errors included"
+}
+t_the_cache_control_map_follows_the_redirect_map_include() {
+  new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit (stderr: $ERR)"
+  local s inc map; s=$(staged_dir)
+  inc=$(grep -n 'redirect-map.conf;' "$s/sites-available/caltechauthors.conf" | head -1 | cut -d: -f1)
+  map=$(grep -n 'map \$upstream_http_x_user_id' "$s/sites-available/caltechauthors.conf" | head -1 | cut -d: -f1)
+  [ -n "$inc" ] && [ -n "$map" ] || { fail "include line '$inc' or map line '$map' not found"; return; }
+  [ "$map" -gt "$inc" ] || fail "the map (line $map) is before the redirect-map include (line $inc): map_hash_* must come first"
+}
+t_the_iiif_location_restates_the_headers_add_header_would_drop() {
+  new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit (stderr: $ERR)"
+  local blk; blk=$(iiif_block "$(staged_dir)")
+  has "$blk" 'add_header Strict-Transport-Security "max-age=15768000";' "HSTS (a location add_header replaces the server-level ones)"
+  has "$blk" 'add_header X-Request-ID $request_id;' "X-Request-ID"
+}
+t_only_the_iiif_location_rewrites_cache_control() {
+  new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit (stderr: $ERR)"
+  local s n; s=$(staged_dir); n=$(grep -c 'add_header Cache-Control' "$s/sites-available/caltechauthors.conf")
+  eq "$n" 1 "add_header Cache-Control appears once, in the IIIF location"
+}
+
 # ---- the runner -------------------------------------------------------------
 
 PATTERN=${1:-}
