@@ -4,7 +4,7 @@ Adding a hostname with certbot
 This page is for developers running a test instance, and for other institutions adapting this code. Certbot is
 a convenience for them: it gets a Let's Encrypt certificate for a hostname so the instance can serve HTTPS.
 `nginx-deploy.bash` only needs the certificate pair to exist; how it got there is up to the host (see
-`docs/nginx.md`). If your certificates come from somewhere else, put the pair where `--tls letsencrypt` expects
+`nginx.md`). If your certificates come from somewhere else, put the pair where `--tls letsencrypt` expects
 it, or ask for a new `--tls` value (the vocabulary is closed on purpose, caltechauthors DR-0009).
 
 The one rule: **use `certbot certonly`, never `certbot --nginx`**, on a host `nginx-deploy.bash` manages. The
@@ -40,7 +40,7 @@ Steps
 
    Add `--cert-name NAME` to both if the lineage has another name. `check` tests a staged copy first and changes
    nothing. A host serves one hostname from this layout, so this *replaces* the name the site answered to
-   before; see "Changing the hostname" in `docs/nginx.md`.
+   before; see "Changing the hostname" in `nginx.md`.
 
 4. **Look.** `curl -sI http://new.example.dev/` should answer `301` to `https://new.example.dev/`, and
    `curl -sI https://new.example.dev/` should answer from the application, not redirect again.

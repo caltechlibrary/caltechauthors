@@ -90,7 +90,7 @@ AWS instance.
 Install the nginx configuration with `nginx-deploy.bash` (see `docs/nginx.md`).
 It renders `nginx/` for the host, checks it with `nginx -t` and `logagent check`
 before copying anything, and leaves the packaged `/etc/nginx/nginx.conf` alone.
-For a Let's Encrypt certificate on a test instance see `Adding-a-Certbot-Hostname.md` (`certbot certonly`, never
+For a Let's Encrypt certificate on a test instance see `docs/Adding-a-Certbot-Hostname.md` (`certbot certonly`, never
 `certbot --nginx`).
 `docs/nginx.md` covers the verbs, rolling back, migrating a host that was configured by hand,
 the IIIF cache and refreshing the Cloudflare address list.

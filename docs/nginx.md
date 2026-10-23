@@ -17,8 +17,8 @@ back, and assumes you were not there when it was written.
 | `conf.d/caltechauthors_cache.conf` | `conf.d/` | The cache zone for anonymous IIIF renders. |
 | `conf.d/cloudflare_real_ip.conf` | `conf.d/` | Trusts the client address from Cloudflare's published ranges only. |
 
-The redirect map for the legacy EPrints URLs is `redirect-map.conf` at the top of the repository, not under
-`nginx/`; the site file includes it by absolute path (`@REPO_DIR@`).
+The redirect map for the legacy EPrints URLs is `nginx/redirect-map.conf`. It is not installed under `/etc/nginx`;
+the site file includes it from the checkout by absolute path (`@REPO_DIR@/nginx/redirect-map.conf`).
 
 The script installs by **copy**, never by symlink, so editing the checkout is never a live change to a
 host. It never edits the packaged `/etc/nginx/nginx.conf`.

@@ -304,7 +304,7 @@ t_tokens_are_replaced_in_the_staged_site_file() {
   new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit"
   local s; s=$(staged_dir); exists "$s/sites-available/caltechauthors.conf" "site file"
   local site; site=$(cat "$s/sites-available/caltechauthors.conf")
-  has "$site" "server_name host.example.org;" "server name"; has "$site" "include $CASE_DIR/repo/redirect-map.conf;" "repo dir in the redirect map include"
+  has "$site" "server_name host.example.org;" "server name"; has "$site" "include $CASE_DIR/repo/nginx/redirect-map.conf;" "repo dir in the redirect map include"
   has "$site" "alias $CASE_DIR/repo/.venv/var/instance/static;" "repo dir in the static alias"
   case "$site" in *@[A-Z_]*@*) fail "an @TOKEN@ is left";; esac
 }
