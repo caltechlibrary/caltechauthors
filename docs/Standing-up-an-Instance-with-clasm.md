@@ -1,7 +1,7 @@
 # Standing up a CaltechAUTHORS instance with clasm
 
 One straight path to a working CaltechAUTHORS test instance (Invenio RDM under
-uv + Granian, repo `caltechauthors`, branch `granian`), provisioned with
+uv + Granian, repo `caltechauthors`, branch `main`), provisioned with
 [clasm](https://github.com/caltechlibrary/clasm). Follow the steps in order.
 The choices are already made; the reasons are in the notes at the end.
 
@@ -89,7 +89,7 @@ aws ssm start-session --target <instance-id> --region us-west-2
 
 ```bash
 sudo -u ubuntu -i
-tmux new -s setup '/usr/local/bin/setup_caltechauthors_granian.bash granian 2>&1 | tee /home/ubuntu/setup.log'
+tmux new -s setup '/usr/local/bin/setup_caltechauthors_granian.bash main 2>&1 | tee /home/ubuntu/setup.log'
 ```
 
 The script clones the repo to `/Sites/caltechauthors`, installs the toolchain,
