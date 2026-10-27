@@ -434,31 +434,9 @@ write_files:
       ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
       ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
       EOT
-      cat <<EOT | sudo tee /etc/nginx/snippets/ssl-params.conf >/dev/null
-      ssl_protocols TLSv1.2 TLSv1.3;
-      ssl_prefer_server_ciphers on;
-      ssl_dhparam /etc/nginx/dhparam.pem;
-      ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
-      ssl_ecdh_curve secp384r1;
-      ssl_session_cache shared:SSL:10m;
-      ssl_session_tickets off;
-      ssl_stapling off;
-      ssl_stapling_verify off;
-      resolver 127.0.0.53 valid=300s;
-      resolver_timeout 5s;
-      EOT
-      # This snippet deliberately carries no add_header of its own. It used to
-      # end with "add_header X-Frame-Options DENY;" and
-      # "add_header X-Content-Type-Options nosniff;", which the application
-      # already sends via Talisman (APP_DEFAULT_SECURE_HEADERS in invenio.cfg,
-      # frame_options "sameorigin"). nginx's add_header appends rather than
-      # replaces, so every 2xx response carried two X-Frame-Options values --
-      # "sameorigin" from the app and "DENY" from here. Browsers collapse
-      # those into one malformed value and refuse to frame the document, which
-      # broke the record file preview (reported live on caltechauthors-v13,
-      # 2026-09-10; the response was confirmed to carry both headers). See
-      # DR-0005: the application owns the security headers, nginx does not
-      # duplicate a subset of them.
+      # snippets/ssl-params.conf is not written here any more: it is in the
+      # repository (nginx/snippets/ssl-params.conf) and nginx-deploy.bash
+      # installs it below, so a stale copy is replaced instead of kept for good.
 
       echo "Installing the nginx configuration with nginx-deploy.bash"
       # The site file, the conf.d files (log format, concurrency limits, IIIF
@@ -467,9 +445,9 @@ write_files:
       # (DR-0009). This step used to write a hand-made copy of the site config
       # that had none of the 2026-10 mitigations and a different layout. The
       # script tests the result on a staged copy of /etc/nginx first, so a bad
-      # configuration stops here instead of at the restart. The three files
-      # written above (ssl-params.conf, self-signed.conf, dhparam.pem) are what
-      # it requires of the host. Ubuntu's default site listens on 80 as
+      # configuration stops here instead of at the restart. The two files
+      # written above (self-signed.conf, dhparam.pem) are what it requires of
+      # the host. Ubuntu's default site listens on 80 as
       # default_server and would collide with ours, so it goes first.
       sudo rm -f /etc/nginx/sites-enabled/default
       sudo bash "/Sites/${INSTANCE_NAME}/nginx-deploy.bash" apply --yes --reload \
