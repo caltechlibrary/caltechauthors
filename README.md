@@ -36,12 +36,6 @@ We currently deploy CaltechAUTHORS on a m7i.xlarge AWS EC2 instance with Ubuntu
 file](https://github.com/caltechlibrary/cloud-init-examples/blob/main/invenio-rdm-13-init.yaml)
 to do most of the initial setup.
 
-### Install NVM
-
-We haven't gotten NVM to install with cloud-init. Run `curl -o-
-https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`, then
-reboot and type `nvm install 18`
-
 ### Install InvenioRDM
 ```
 cd caltechauthors
