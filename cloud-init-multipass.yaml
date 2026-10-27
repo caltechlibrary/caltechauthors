@@ -37,7 +37,7 @@
 # scaffolded a brand-new RDM v14 project from cookiecutter; this one
 # clones and deploys the real, already-existing caltechauthors repo, so
 # the scaffold-a-new-project step is replaced entirely -- see
-# setup_caltechauthors_granian.bash).
+# setup_caltechauthors.bash).
 #
 # Scope decisions (this repo, not carried over from granian-rdm-v14):
 #   - x86_64, not arm64/Graviton -- matches production's actual reserved
@@ -62,7 +62,7 @@
 #     this repo for the same flag choice and the same caveat.
 #   - SQL/OpenSearch data comes from a real production snapshot via
 #     clasm's Backup & Restore workflow, not invenio-cli's demo data --
-#     setup_caltechauthors_granian.bash deliberately skips
+#     setup_caltechauthors.bash deliberately skips
 #     `invenio-cli services setup` (which would create/migrate a demo
 #     schema clasm's restore would just immediately discard) and only
 #     starts the backing containers, leaving DB/index population to
@@ -109,14 +109,14 @@ write_files:
       # Installs uv, a uv-managed Python 3.12, invenio-cli (via "uv tool
       # install", not pip -- no PEP 668 externally-managed-environment
       # dance needed), and Node 18 -- everything
-      # setup_caltechauthors_granian.bash needs. Run once at boot via
+      # setup_caltechauthors.bash needs. Run once at boot via
       # runcmd; idempotent if rerun.
       set -euo pipefail
 
       # Installed as the ubuntu user (not root, which is what this script
       # otherwise runs as via runcmd) so everything lands in
       # /home/ubuntu/.local/bin, which is where
-      # setup_caltechauthors_granian.bash's PATH and the systemd units'
+      # setup_caltechauthors.bash's PATH and the systemd units'
       # ExecStart both expect to find it.
       echo "Installing uv for the ubuntu user..."
       sudo -u ubuntu -H bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
@@ -385,7 +385,7 @@ write_files:
       # in after boot and run this manually so each step can be watched/
       # debugged.
       #
-      # USAGE: setup_caltechauthors_granian.bash [BRANCH] [REPO_URL]
+      # USAGE: setup_caltechauthors.bash [BRANCH] [REPO_URL]
       set -euo pipefail
       BRANCH="${1:-main}"
       REPO_URL="${2:-https://github.com/caltechlibrary/caltechauthors.git}"
@@ -612,6 +612,6 @@ write_files:
              invenio-cli services stop
 
       EOT
-    path: /usr/local/bin/setup_caltechauthors_granian.bash
+    path: /usr/local/bin/setup_caltechauthors.bash
     owner: 'root:root'
     permissions: '0775'
