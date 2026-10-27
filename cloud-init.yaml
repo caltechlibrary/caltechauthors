@@ -129,6 +129,31 @@ write_files:
       EOT
       sysctl --system
 
+      # AWS CLI v2, last so a failed download cannot stop the toolchain above.
+      # cloud-init has installed `unzip` "for the AWS CLI v2 installer" since
+      # 2026-08-18 but nothing ever ran the installer, so clasm's backup and
+      # restore workflows, which run `aws s3` on the instance, failed their
+      # preflight on every new instance (third occurrence, 2026-09-29). Same
+      # commands as clasm's instance_install_awscli.bash, which worked on
+      # caltechauthors-test-v13; arch-aware because the Multipass images are
+      # aarch64 on Apple silicon and production is x86_64.
+      echo "Installing AWS CLI v2..."
+      if command -v aws >/dev/null 2>&1; then
+        echo "AWS CLI already installed: $(aws --version 2>&1)"
+      else
+        case "$(uname -m)" in
+          x86_64) AWSCLI_ARCH=x86_64 ;;
+          aarch64) AWSCLI_ARCH=aarch64 ;;
+          *) echo "Unsupported architecture for the AWS CLI: $(uname -m)" >&2; exit 1 ;;
+        esac
+        AWSCLI_TMP=$(mktemp -d /var/tmp/awscli-install.XXXXXX)
+        curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${AWSCLI_ARCH}.zip" -o "$AWSCLI_TMP/awscliv2.zip"
+        unzip -q "$AWSCLI_TMP/awscliv2.zip" -d "$AWSCLI_TMP"
+        "$AWSCLI_TMP/aws/install"
+        rm -r "$AWSCLI_TMP"
+        echo "Installed: $(aws --version 2>&1)"
+      fi
+
     path: /usr/local/bin/install_rdm_toolchain.bash
     owner: 'root:root'
     permissions: '0775'
@@ -358,6 +383,12 @@ write_files:
       echo "Cloning ${REPO_URL} (branch ${BRANCH}) into /Sites/${INSTANCE_NAME}"
       git clone --branch "$BRANCH" "$REPO_URL" "$INSTANCE_NAME"
       cd "/Sites/${INSTANCE_NAME}"
+      if [ ! -f nginx-deploy.bash ]; then
+        echo "ERROR: branch ${BRANCH} has no nginx-deploy.bash, which this script uses to" >&2
+        echo "install the nginx configuration. Use a branch that has it, for example:" >&2
+        echo "  $0 rsdoiel" >&2
+        exit 1
+      fi
 
       echo "Syncing dependencies via uv -- pyproject.toml/uv.lock already"
       echo "pin invenio-app-rdm==v13.1.2.caltechauthors.2 and granian,"
@@ -429,151 +460,21 @@ write_files:
       # DR-0005: the application owns the security headers, nginx does not
       # duplicate a subset of them.
 
-      echo "Writing nginx site config"
-      # Real bug found via live testing 2026-07-27 (Step 7 verification):
-      # the proxy "location" blocks used to live in a server block with
-      # NO "listen" directive of its own -- nginx defaults that to
-      # "listen 80", which then collided with the *separate*, explicit
-      # "listen 80" block below it (both declaring "server_name _;" on
-      # the same socket), logged as "conflicting server name \"_\" on
-      # 0.0.0.0:80, ignored". Whichever block nginx picked, the TLS
-      # (443, ssl) block had NO location blocks of its own at all -- so
-      # every HTTPS request (the actual intended access path, and what
-      # verify_rdm_boot.bash checks) fell through to nginx's own compiled-
-      # in default root ("/usr/share/nginx/html"), a bare 404, not our
-      # app. Fixed by collapsing to two server blocks: plain HTTP (80)
-      # that redirects to HTTPS, and the actual TLS (443) block carrying
-      # every "location" -- this is the only block that now needs them.
-      cat <<EOT >"${INSTANCE_NAME}_nginx.conf"
-
-      # nginx 1.24's mime.types (Ubuntu) has no entry for .mjs, so pdf.js's seven ES
-      # modules under /static/js/pdfjs fall through to nginx.conf's
-      # "default_type application/octet-stream" and Firefox refuses to load them:
-      # "Loading module from ... was blocked because of a disallowed MIME type
-      # (application/octet-stream)". Reported live 2026-09-10, after the
-      # X-Frame-Options fix -- the PDF previewer had two independent faults, and
-      # fixing the header alone was necessary but not sufficient.
-      #
-      # Placed here, at http level, deliberately. nginx.conf's own
-      # "include /etc/nginx/mime.types" is a types block in this same context, and
-      # repeated types blocks in one context add to the map. A types block in a
-      # nested context (server or location) REPLACES the inherited map instead, so
-      # putting this inside "location /static" would serve every other extension
-      # there as octet-stream. Verify after any change to this block by curling a
-      # .mjs *and* a control .css -- see verify_rdm_boot.bash.
-      #
-      # .wasm is already mapped by the distro file; .map, .ttf, .bcmap and .xsl are
-      # not, and are left alone. Only .mjs is fetched in a context that enforces its
-      # MIME type. Note that nginx's map sends .ts to video/mp2t, which is right for
-      # a transport stream and wrong for TypeScript -- irrelevant here only because
-      # nothing loads the .ts sources in the browser.
-      types {
-          text/javascript mjs;
-      }
-
-      server {
-        server_name _;
-        listen 80;
-        listen [::]:80;
-        return 301 https://\$host\$request_uri;
-      }
-
-      server {
-        server_name _;
-        include snippets/self-signed.conf;
-        include snippets/ssl-params.conf;
-        add_header Strict-Transport-Security "max-age=15768000";
-        add_header X-Request-ID \$request_id;
-        listen 443 ssl;
-        listen [::]:443 ssl;
-
-        proxy_request_buffering off;
-        proxy_buffering off;
-        proxy_http_version 1.1;
-
-        location / {
-          proxy_pass http://127.0.0.1:5000;
-          proxy_set_header Host \$host;
-          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto \$scheme;
-          proxy_set_header X-Request-ID \$request_id;
-          proxy_hide_header X-Session-ID;
-          proxy_hide_header X-User-ID;
-          client_max_body_size 100m;
-        }
-        # Real bug found via live testing 2026-07-27 (Step 7 verification):
-        # every /api/* request 404'd, including paths with confirmed
-        # indexed data (e.g. /api/vocabularies/languages) -- ruled out
-        # both "no demo data" and "OpenSearch still indexing" (a 200
-        # with an empty result, or a 500, would look different; this was
-        # a bare Werkzeug "no URL rule" 404). Root cause: confirmed live
-        # that invenio_app.wsgi_rest:application (port 5001, the REST-
-        # only Granian process) mounts every API blueprint at the root
-        # ("/records" returns 200 with real data), NOT under "/api" --
-        # that prefix is nginx's job to strip before proxying, which
-        # "proxy_pass http://127.0.0.1:5001;" (no trailing slash, so
-        # nginx forwards the full unmodified URI) never did. A trailing
-        # slash on proxy_pass makes nginx replace the matched location
-        # prefix with it instead of preserving the full path.
-        #
-        # Superseded 2026-09-10: the prefix strip moved out of nginx and
-        # into Granian's --url-path-prefix (rdm_rest.service), because
-        # stripping it here left SCRIPT_NAME empty and every path the REST
-        # app generated itself came out without "/api" -- a 404 on the
-        # administration Banners page, among others. No trailing slash on
-        # proxy_pass now: nginx forwards the full unmodified URI again.
-        location /api {
-          proxy_pass http://127.0.0.1:5001;
-          proxy_set_header Host \$host;
-          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto \$scheme;
-          proxy_set_header X-Request-ID \$request_id;
-          proxy_hide_header X-Session-ID;
-          proxy_hide_header X-User-ID;
-          client_max_body_size 100m;
-        }
-        # This location used to drop the /api/ prefix with a capture
-        # group, because a regex location can't use proxy_pass's
-        # trailing-slash prefix-strip trick. With Granian owning the
-        # strip there is nothing left to rewrite, so the capture group
-        # is gone. Optional trailing /<part-number> and trailing slash
-        # match this repo's own nginx-caltechauthors.conf (multipart
-        # file-content requests carry a numeric part suffix).
-        location ~ ^/api/records/.+/draft/files/.+/content(?:/[0-9]+)?/?$ {
-          gzip off;
-          proxy_pass http://127.0.0.1:5001;
-          proxy_set_header Host \$host;
-          proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto \$scheme;
-          proxy_set_header X-Request-ID \$request_id;
-          proxy_hide_header X-Session-ID;
-          proxy_hide_header X-User-ID;
-          client_max_body_size 500G;
-        }
-        # Static content served directly by nginx, matching this repo's
-        # own nginx-sites-enabled-default (path reflects uv's venv layout,
-        # not the old Pipenv virtualenvs path).
-        location /static {
-          alias /Sites/${INSTANCE_NAME}/.venv/var/instance/static;
-          autoindex off;
-          # nginx serves these itself, so the application never sees them and
-          # Talisman never gets to set a header on them. A location-level
-          # add_header REPLACES every inherited one rather than adding to it,
-          # so the two server-level headers have to be restated here or they
-          # are silently lost for /static.
-          add_header Strict-Transport-Security "max-age=15768000";
-          add_header X-Request-ID \$request_id;
-          add_header X-Content-Type-Options nosniff;
-        }
-      }
-
-      EOT
-      sudo mv -v "${INSTANCE_NAME}_nginx.conf" "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
-      sudo chown root:root "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
-      sudo chmod 664 "/etc/nginx/sites-available/${INSTANCE_NAME}.conf"
-      sudo ln -sf "/etc/nginx/sites-available/${INSTANCE_NAME}.conf" "/etc/nginx/sites-enabled/${INSTANCE_NAME}.conf"
-      sudo rm -f "/etc/nginx/sites-enabled/default"
-      sudo systemctl restart nginx
+      echo "Installing the nginx configuration with nginx-deploy.bash"
+      # The site file, the conf.d files (log format, concurrency limits, IIIF
+      # cache, Cloudflare real-IP list) and the TLS include all come from this
+      # repository's nginx/ tree, so a new instance runs what production runs
+      # (DR-0009). This step used to write a hand-made copy of the site config
+      # that had none of the 2026-10 mitigations and a different layout. The
+      # script tests the result on a staged copy of /etc/nginx first, so a bad
+      # configuration stops here instead of at the restart. The three files
+      # written above (ssl-params.conf, self-signed.conf, dhparam.pem) are what
+      # it requires of the host. Ubuntu's default site listens on 80 as
+      # default_server and would collide with ours, so it goes first.
+      sudo rm -f /etc/nginx/sites-enabled/default
+      sudo bash "/Sites/${INSTANCE_NAME}/nginx-deploy.bash" apply --yes --reload \
+        --site-name "${INSTANCE_NAME}" --server-name _ --tls self-signed \
+        --repo-dir "/Sites/${INSTANCE_NAME}"
 
       echo "Writing .env"
       # invenio.cfg has NO Redis/RabbitMQ/OpenSearch settings at all (only
