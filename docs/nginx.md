@@ -29,10 +29,10 @@ host. It never edits the packaged `/etc/nginx/nginx.conf`.
 All of them need `--server-name` and `--tls`; `nginx-deploy.bash --help` is the full manual.
 
 ```shell
-sudo nginx-deploy.bash check  --server-name authors.library.caltech.edu --tls letsencrypt
-sudo nginx-deploy.bash diff   --server-name authors.library.caltech.edu --tls letsencrypt
-sudo nginx-deploy.bash apply  --server-name authors.library.caltech.edu --tls letsencrypt --reload
-sudo nginx-deploy.bash rollback --reload
+sudo ./nginx-deploy.bash check  --server-name authors.library.caltech.edu --tls letsencrypt
+sudo ./nginx-deploy.bash diff   --server-name authors.library.caltech.edu --tls letsencrypt
+sudo ./nginx-deploy.bash apply  --server-name authors.library.caltech.edu --tls letsencrypt --reload
+sudo ./nginx-deploy.bash rollback --reload
 ```
 
 - **check** renders the files, builds a *staged* copy of the host's `/etc/nginx` with them laid over it, and
@@ -69,9 +69,8 @@ ones. After a reload, wait a second or two and try again before concluding anyth
 The script needs only the certificate pair. With `--tls letsencrypt` it is
 `/etc/letsencrypt/live/<cert-name>/fullchain.pem` and `privkey.pem`; with `--tls self-signed` (test instances)
 it is the pair and `snippets/self-signed.conf` that `cloud-init` writes, and the script stops if that file is
-missing. How the pair got there is up to the host. The `--tls` vocabulary is closed on purpose: a host whose
-certificates come from elsewhere (AWS or campus issued, say) needs a new value added, with a decision record
-(caltechauthors DR-0009), and nothing is built for that today.
+missing. How the pair got there is up to the host. The `--tls` vocabulary is closed on purpose
+(caltechauthors DR-0009).
 
 Certbot is a convenience for developers and for other institutions adapting this code, and
 `Adding-a-Certbot-Hostname.md` is its how-to. The one rule is `certbot certonly`, **never `certbot --nginx`**, on
@@ -144,7 +143,7 @@ certbot is never allowed to edit a site file.
 
 ## Where to look when it is wrong
 
-- `sudo nginx-deploy.bash diff ...` says what differs from the repository.
+- `sudo ./nginx-deploy.bash diff ...` says what differs from the repository.
 - `/var/log/nginx/access.log` carries the `caltechauthors_bots` format, including `rt=` and `cache=`;
   `/var/log/nginx/error.log` carries `limiting connections` lines when a cap trips.
 - `sudo nginx -t` tests the installed tree. nginx creates the cache directory when it tests, and fails if its
