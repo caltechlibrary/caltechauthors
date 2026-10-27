@@ -12,6 +12,7 @@ back, and assumes you were not there when it was written.
 |---|---|---|
 | `sites-available/caltechauthors.conf` | `/etc/nginx/sites-available/<site-name>.conf`, linked from `sites-enabled/` | The site: ports 80 and 443, the proxy locations, the IIIF cache and `Cache-Control` rule, the legacy redirects. A **template**: the script replaces `@SERVER_NAME@` and `@REPO_DIR@`. |
 | `tls/letsencrypt.conf` or `tls/self-signed.conf` | `snippets/caltechauthors-tls.conf` | The certificate pair, chosen by `--tls`. |
+| `snippets/ssl-params.conf` | `snippets/ssl-params.conf` | The TLS protocols, ciphers and session settings, for every `--tls`. It carries no `add_header`: the application sends the security headers. |
 | `conf.d/caltechauthors_log.conf` | `conf.d/` | The `caltechauthors_bots` log format. |
 | `conf.d/caltechauthors_limits.conf` | `conf.d/` | The concurrency caps for `/api` and `/api/iiif/`. |
 | `conf.d/caltechauthors_cache.conf` | `conf.d/` | The cache zone for anonymous IIIF renders. |
@@ -85,6 +86,13 @@ define the `caltechauthors_bots` log format a second time. `check` and `apply` r
 and change nothing. Rerun with `--migrate-legacy`: it backs up both files, puts back the package's own
 `nginx.conf` (taken from the nginx-common `.deb`, and accepted only if its checksum is the one `dpkg` recorded),
 removes the old log file, and installs. `rollback` undoes all of it. Do this in a quiet window, with `--reload`.
+
+`snippets/ssl-params.conf` is not legacy. It is an ordinary managed file, so `diff` shows how a host's copy
+differs and `apply` replaces it, with a backup. Until 2026-10-27 only `cloud-init` wrote it and the script
+only checked that it existed, so a host provisioned before 2026-09-10 kept a copy ending in
+`add_header X-Frame-Options DENY;`. Next to the application's `sameorigin` that DENY line broke the record
+file preview: Firefox reports the two values as `"invalid" is not a valid directive`. Run `diff` before the
+first `apply` on such a host, to see what will change.
 
 ## The IIIF cache and how to clear it
 
