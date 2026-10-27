@@ -286,9 +286,16 @@ t_the_default_etc_dir_needs_root() {
   run -- check --repo-dir "$CASE_DIR/repo" --server-name a.example --tls self-signed --no-logagent
   eq "$RC" 77 "exit"; has "$ERR" "root" "says why"
 }
-t_a_missing_ssl_params_snippet_is_no_input() {
-  new_case $FUNCNAME; rm "$CASE_DIR/etc/snippets/ssl-params.conf"; run -- $(std) --no-logagent
-  eq "$RC" 66 "exit"; has "$ERR" "ssl-params.conf" "names the file"
+t_a_missing_repository_ssl_params_snippet_is_no_input() {
+  new_case $FUNCNAME; rm "$CASE_DIR/repo/nginx/snippets/ssl-params.conf"; run -- $(std) --no-logagent
+  eq "$RC" 66 "exit"; has "$ERR" "$CASE_DIR/repo/nginx/snippets/ssl-params.conf" "names the repository's file"
+}
+t_a_host_without_the_ssl_params_snippet_is_given_one() {
+  new_case $FUNCNAME; rm "$CASE_DIR/etc/snippets/ssl-params.conf"
+  run -- $(std) --no-logagent; eq "$RC" 0 "check no longer requires the host's copy (stderr: $ERR)"
+  apply_ok
+  cmp -s "$CASE_DIR/etc/snippets/ssl-params.conf" "$CASE_DIR/repo/nginx/snippets/ssl-params.conf" || fail "the installed snippet is not the repository's"
+  has "$(cat "$(latest_backup)/MANIFEST")" "created snippets/ssl-params.conf" "the manifest says created"
 }
 t_a_missing_dhparam_is_no_input() {
   new_case $FUNCNAME; rm "$CASE_DIR/etc/dhparam.pem"; run -- $(std) --no-logagent
@@ -494,6 +501,7 @@ t_apply_installs_files_with_mode_0644() {
   eq "$(mode_of "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "-rw-r--r--" "conf.d file"
   eq "$(mode_of "$CASE_DIR/etc/sites-available/caltechauthors.conf")" "-rw-r--r--" "site file"
   eq "$(mode_of "$CASE_DIR/etc/snippets/caltechauthors-tls.conf")" "-rw-r--r--" "tls snippet"
+  eq "$(mode_of "$CASE_DIR/etc/snippets/ssl-params.conf")" "-rw-r--r--" "ssl-params snippet"
 }
 t_apply_leaves_the_packaged_nginx_conf_and_every_other_file_alone() {
   new_case $FUNCNAME; echo "# another site's file" > "$CASE_DIR/etc/conf.d/other.conf"; ln -s /nowhere "$CASE_DIR/etc/sites-enabled/default"
@@ -829,6 +837,39 @@ t_only_the_iiif_location_rewrites_cache_control() {
   new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit (stderr: $ERR)"
   local s n; s=$(staged_dir); n=$(grep -c 'add_header Cache-Control' "$s/sites-available/caltechauthors.conf")
   eq "$n" 1 "add_header Cache-Control appears once, in the IIIF location"
+}
+
+# ---- snippets/ssl-params.conf is managed (2026-10-27) --------------------------
+# cloud-init used to be its only writer and the script only checked that it existed, so
+# authors.caltechlibrary.dev kept a pre-2026-09-10 copy ending in "add_header X-Frame-Options DENY;".
+# Next to the application's "sameorigin" that made the browser refuse to frame the file preview.
+
+# make_stale_ssl_params gives the fixture the snippet as cloud-init wrote it before 2026-09-10.
+make_stale_ssl_params() {
+  printf 'ssl_protocols TLSv1.2 TLSv1.3;\nadd_header X-Frame-Options DENY;\nadd_header X-Content-Type-Options nosniff;\n' \
+    > "$CASE_DIR/etc/snippets/ssl-params.conf"
+}
+t_diff_reports_a_stale_ssl_params_snippet() {
+  new_case $FUNCNAME; apply_ok; run -- $(stdv diff); eq "$RC" 0 "no drift after apply"
+  make_stale_ssl_params
+  run -- $(stdv diff); eq "$RC" 1 "drift"
+  has "$OUT" "differs  snippets/ssl-params.conf" "names the file"; has "$OUT" "-add_header X-Frame-Options DENY;" "the diff shows the stale header"
+}
+t_apply_replaces_a_stale_ssl_params_snippet_and_rollback_puts_it_back() {
+  new_case $FUNCNAME; make_stale_ssl_params; local stale; stale=$(cat "$CASE_DIR/etc/snippets/ssl-params.conf")
+  apply_ok
+  cmp -s "$CASE_DIR/etc/snippets/ssl-params.conf" "$CASE_DIR/repo/nginx/snippets/ssl-params.conf" || fail "the installed snippet is not the repository's"
+  hasnt "$(grep -v '^[[:space:]]*#' "$CASE_DIR/etc/snippets/ssl-params.conf")" "add_header" "the stale headers are gone (the comments still tell their story)"
+  has "$(cat "$(latest_backup)/MANIFEST")" "replaced snippets/ssl-params.conf" "the manifest says replaced"
+  eq "$(cat "$(latest_backup)/files/snippets/ssl-params.conf")" "$stale" "the backup holds the host's copy"
+  run -- $(stdr); eq "$RC" 0 "rollback (stderr: $ERR)"
+  eq "$(cat "$CASE_DIR/etc/snippets/ssl-params.conf")" "$stale" "rollback puts the host's copy back"
+}
+t_the_ssl_params_snippet_sends_no_headers() {
+  # DR-0005: the application owns the security headers; an add_header here doubles one of them
+  new_case $FUNCNAME
+  eq "$(grep -v '^[[:space:]]*#' "$HERE/nginx/snippets/ssl-params.conf" | grep -c 'add_header')" 0 "add_header outside a comment"
+  has "$(cat "$HERE/nginx/snippets/ssl-params.conf")" "ssl_dhparam /etc/nginx/dhparam.pem;" "it names the DH parameters the script requires"
 }
 
 # ---- the runner -------------------------------------------------------------
