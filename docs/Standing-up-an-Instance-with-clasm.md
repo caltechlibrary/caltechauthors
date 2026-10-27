@@ -89,7 +89,7 @@ aws ssm start-session --target <instance-id> --region us-west-2
 
 ```bash
 sudo -u ubuntu -i
-tmux new -s setup '/usr/local/bin/setup_caltechauthors_granian.bash main 2>&1 | tee /home/ubuntu/setup.log'
+tmux new -s setup '/usr/local/bin/setup_caltechauthors.bash main 2>&1 | tee /home/ubuntu/setup.log'
 ```
 
 The script clones the repo to `/Sites/caltechauthors`, installs the toolchain,
