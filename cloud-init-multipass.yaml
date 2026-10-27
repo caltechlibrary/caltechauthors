@@ -32,7 +32,7 @@
 # If this diverges from cloud-init.yaml later, reconcile fixes both ways.
 #
 # Bring-up machine for CaltechAUTHORS running under Granian instead of
-# uWSGI (repo `caltechauthors`, branch `granian`). Adapted from the
+# uWSGI (repo `caltechauthors`, branch `main`). Adapted from the
 # `granian-rdm-v14` research project's own cloud-init.yaml (that project
 # scaffolded a brand-new RDM v14 project from cookiecutter; this one
 # clones and deploys the real, already-existing caltechauthors repo, so
@@ -387,7 +387,7 @@ write_files:
       #
       # USAGE: setup_caltechauthors_granian.bash [BRANCH] [REPO_URL]
       set -euo pipefail
-      BRANCH="${1:-granian}"
+      BRANCH="${1:-main}"
       REPO_URL="${2:-https://github.com/caltechlibrary/caltechauthors.git}"
       INSTANCE_NAME="caltechauthors"
 
