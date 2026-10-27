@@ -37,7 +37,7 @@ recreates everything with 'invenio-cli services setup'.
 database and every OpenSearch index on this instance. Never run it against
 an instance whose data matters -- production, or any dev/test instance
 someone else has work in progress on. If you only need to rebuild search
-indexes without losing Postgres data, see building_indexes.md instead;
+indexes without losing Postgres data, see docs/building_indexes.md instead;
 that path never touches the containers or these host directories at all.
 
 Without '--yes-i-know' this only prints what it would do and exits.

@@ -87,13 +87,13 @@ pipenv run invenio vocabularies import --vocabulary names --filepath ./vocabular
 You'll need a domain name, and set an A record to point the domain name to your
 AWS instance.
 
-Move nginx.conf to `/etc/nginx/sites-enabled/default`
-
-Copy redirect-map.conf to `/etc/nginx/`
-
-Get a certificate with `sudo certbot --nginx`
-
-Restart nginx with `sudo service nginx restart`
+Install the nginx configuration with `./nginx-deploy.bash` (see `docs/nginx.md`).
+It renders `nginx/` for the host, checks it with `nginx -t` and `logagent check`
+before copying anything, and leaves the packaged `/etc/nginx/nginx.conf` alone.
+For a Let's Encrypt certificate on a test instance see `docs/Adding-a-Certbot-Hostname.md` (`certbot certonly`, never
+`certbot --nginx`).
+`docs/nginx.md` covers the verbs, rolling back, migrating a host that was configured by hand,
+the IIIF cache and refreshing the Cloudflare address list.
 
 ### Systemctl
 
