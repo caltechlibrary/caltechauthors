@@ -12,7 +12,7 @@
 
 set -u
 
-VERSION=0.0.3
+VERSION=0.0.4
 PROG=nginx-deploy.bash
 
 # Exit codes, workspace DR-0014.
@@ -279,12 +279,13 @@ if [ "$VERB" != rollback ]; then
   [ -d "$SRC/conf.d" ] || die $EX_NOINPUT "missing: $SRC/conf.d"
   [ -f "$SRC/sites-available/caltechauthors.conf" ] || die $EX_NOINPUT "missing: $SRC/sites-available/caltechauthors.conf"
   [ -f "$SRC/tls/$TLS.conf" ] || die $EX_NOINPUT "missing: $SRC/tls/$TLS.conf"
+  [ -f "$SRC/snippets/ssl-params.conf" ] || die $EX_NOINPUT "missing: $SRC/snippets/ssl-params.conf"
 fi
 
 if [ "$VERB" = check ] || [ "$VERB" = apply ]; then
   [ -f "$ETC_DIR/nginx.conf" ] || die $EX_NOINPUT "missing: $ETC_DIR/nginx.conf"
-  # Written by cloud-init, not by this script; it is required, not created.
-  [ -f "$ETC_DIR/snippets/ssl-params.conf" ] || die $EX_NOINPUT "missing: $ETC_DIR/snippets/ssl-params.conf (cloud-init writes it)"
+  # Written by cloud-init, not by this script; it is required, not created. (snippets/ssl-params.conf
+  # was too, until a host kept a stale copy of it: it is managed now, see render_all.)
   [ -f "$ETC_DIR/dhparam.pem" ] || die $EX_NOINPUT "missing: $ETC_DIR/dhparam.pem (cloud-init writes it)"
   if [ "$TLS" = self-signed ]; then
     [ -f "$ETC_DIR/snippets/self-signed.conf" ] || die $EX_NOINPUT "missing: $ETC_DIR/snippets/self-signed.conf (cloud-init writes it; --tls self-signed needs it)"
@@ -339,6 +340,8 @@ render_all() {
   MANAGED+=("sites-available/$SITE_NAME.conf")
   render_file "$SRC/tls/$TLS.conf" "$RENDER/snippets/caltechauthors-tls.conf"
   MANAGED+=("snippets/caltechauthors-tls.conf")
+  render_file "$SRC/snippets/ssl-params.conf" "$RENDER/snippets/ssl-params.conf"
+  MANAGED+=("snippets/ssl-params.conf")
   LINK_REL="sites-enabled/$SITE_NAME.conf"
   LINK_TARGET="$ETC_DIR/sites-available/$SITE_NAME.conf"
 }
