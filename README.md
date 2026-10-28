@@ -49,14 +49,13 @@ invenio-cli install
 invenio-cli services setup --no-demo-data
 ```
 
-You'll need a .env file in /Sites, which includes secrets:
+You'll need a .env file in /Sites/caltechauthors, which includes secrets.
+Copy [.env.example](.env.example), which documents each variable, and fill in
+the blanks:
 
 ```
-INVENIO_DATACITE_PASSWORD=
-INVENIO_SECRET_KEY=
-INVENIO_S3_ACCESS_KEY_ID=
-INVENIO_S3_SECRET_ACCESS_KEY=
-INVENIO_MAIL_PASSWORD=
+cp .env.example .env
+chmod 600 .env
 ```
 
 Edit /etc/sysctl.conf and add vm.max_map_count=262144

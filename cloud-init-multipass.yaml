@@ -501,6 +501,7 @@ write_files:
       # 2=celery-result/3=ratelimit/4=communities-identities-cache) matches
       # cookiecutter-invenio-rdm's own conventional default split; RabbitMQ
       # has no custom auth in docker-services.yml, so guest/guest applies.
+      # .env.example documents every variable; keep the two in step.
       INVENIO_SECRET_KEY="$(makepasswd -char 64)"
       cat <<EOT >.env
       INVENIO_SECRET_KEY=${INVENIO_SECRET_KEY}
