@@ -46,8 +46,8 @@
 #     doesn't apply here (plain Python 3.12, no free-threading).
 #   - Python 3.12 (production's real pin, via this repo's own
 #     .python-version), not 3.14 -- no free-threading angle at all here.
-#   - Node 18, matching this repo's package.json (engines.node >=18) and
-#     what uv-gunicorn-dev's own DEV_SETUP.md already documents using.
+#   - Node 24 (current LTS), which satisfies this repo's package.json
+#     (engines.node >=18).
 #   - invenio-app-rdm pinned to production's real
 #     v13.1.2.caltechauthors.2 (via this repo's own pyproject.toml/
 #     uv.lock, not a fresh `uv add` here) -- not RDM v14.
@@ -108,7 +108,7 @@ write_files:
       #!/bin/bash
       # Installs uv, a uv-managed Python 3.12, invenio-cli (via "uv tool
       # install", not pip -- no PEP 668 externally-managed-environment
-      # dance needed), and Node 18 -- everything
+      # dance needed), and Node 24 -- everything
       # setup_caltechauthors.bash needs. Run once at boot via
       # runcmd; idempotent if rerun.
       set -euo pipefail
@@ -127,10 +127,10 @@ write_files:
       echo "Installing invenio-cli as a uv tool (isolated venv, own Python -- independent of any project's Python pin)..."
       sudo -u ubuntu -H bash -c 'export PATH="$HOME/.local/bin:$PATH"; uv tool install "invenio-cli==1.11.0"'
 
-      echo "Installing nvm + Node 18 for the ubuntu user..."
-      # Node >=18 is this repo's own package.json requirement
-      # (engines.node) for RDM v13.1.2 -- not v14's stricter Node
-      # 22/24+ floor, which doesn't apply to this pin.
+      echo "Installing nvm + Node 24 for the ubuntu user..."
+      # Node 24 is the current LTS. This repo's package.json only
+      # requires >=18 (engines.node), so 24 also meets RDM v14's
+      # 22/24+ floor ahead of that upgrade.
       #
       # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
       # carried over as a precaution here too): git-cloning nvm directly
@@ -148,8 +148,8 @@ write_files:
         fi
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-        nvm install 18
-        nvm alias default 18
+        nvm install 24
+        nvm alias default 24
         echo "" >> "$HOME/.bashrc"
         echo "export NVM_DIR=\"\$HOME/.nvm\"" >> "$HOME/.bashrc"
         echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"" >> "$HOME/.bashrc"
@@ -393,7 +393,7 @@ write_files:
 
       export NVM_DIR="$HOME/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-      nvm use 18
+      nvm use 24
       export PATH="$HOME/.local/bin:$PATH"
 
       # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
@@ -401,7 +401,7 @@ write_files:
       # devDependencies pin @rspack/core <1.7.0 while @rspack/cli 2.1.5's
       # own peer dependency wants ^2.0.0-0 -- an inconsistency in that
       # package's own package.json, not anything specific to this
-      # project. npm (10.x, strict-by-default peer resolution) refuses to
+      # project. npm (strict-by-default peer resolution) refuses to
       # install at all otherwise. Setting this persists to ~/.npmrc, so
       # it applies automatically to the npm install invenio-cli runs
       # internally during "invenio-cli install".
