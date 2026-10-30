@@ -9,7 +9,6 @@ dependencies = [
   "invenio-app-rdm[opensearch2,s3]~=13.1.0",
   "idutils",
   "invenio-s3",
-  "invenio-vocabularies",
   "invenio-logging[sentry]",
   "python-dotenv",
   "granian",
@@ -24,4 +23,3 @@ dev = [
 caltechauthors       = { path = "./site", editable = true }
 invenio-app-rdm      = { git = "https://github.com/caltechlibrary/invenio-app-rdm.git", tag = "v13.1.2.caltechauthors.2" }
 idutils              = { git = "https://github.com/caltechlibrary/idutils.git", branch = "authors" }
-invenio-vocabularies = { git = "https://github.com/caltechlibrary/invenio-vocabularies.git", branch = "maint-9.0.x" }
