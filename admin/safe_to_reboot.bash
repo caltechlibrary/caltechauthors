@@ -55,7 +55,12 @@ if [ -n "$RUNNING" ]; then
   echo "($INSTANCE_DIR's containers are stopped by systemd at shutdown.)"
 fi
 
-if pgrep -f 'invenio-sql-backup|pg_dump' >/dev/null 2>&1; then
+# Match the process, not any command line that mentions it: `pgrep -f pg_dump` also matches
+# `less invenio-sql-backup.bash` or an SSM wrapper whose script text contains the word. The dump
+# is the process named pg_dump (visible from the host even when it runs in the db container);
+# the script is a shell whose first operand is invenio-sql-backup*.
+BACKUP_SCRIPT='^([^ ]*/)?(ba)?sh( -[A-Za-z]+)* [^ ]*invenio-sql-backup'
+if pgrep -x pg_dump >/dev/null 2>&1 || pgrep -f "$BACKUP_SCRIPT" >/dev/null 2>&1; then
   UNSAFE=1
   echo "A SQL backup is running. Do not reboot until it finishes: wait, then run this check again."
 fi

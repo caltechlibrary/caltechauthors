@@ -123,7 +123,41 @@ t_safe_a_running_backup_does_not_ask_for_a_stop() {
 t_safe_looks_for_both_backup_programs() {
   # the stub ignores arguments, so pin what the script asks pgrep for
   new_case $FUNCNAME; run_script "$SAFE"
-  log_has "pgrep -f .*invenio-sql-backup"; log_has "pgrep -f .*pg_dump"
+  log_has "pgrep -x pg_dump"; log_has "pgrep -f .*invenio-sql-backup"
+}
+
+# The next three use the REAL pgrep (the stub is removed), because the failure they pin is about
+# what pgrep matches. Found on a Multipass instance 2026-11-05: `pgrep -f pg_dump` matched the
+# probe's own `bash -c '...pg_dump...'` and reported a backup that was not running.
+t_safe_a_command_line_that_only_mentions_the_backup_is_not_a_backup() {
+  new_case $FUNCNAME; rm "$CASE_DIR/bin/pgrep"
+  bash -c 'sleep 4; :' invenio-sql-backup.bash pg_dump & local decoy=$!
+  sleep 0.5; STUB_ACTIVE="" run_script "$SAFE"; kill $decoy 2>/dev/null; wait $decoy 2>/dev/null
+  expect_rc 0 "only a decoy mentions the backup"; [ -z "$OUT" ] || fail "expected no output, got: $OUT"
+}
+
+t_safe_an_editor_open_on_the_backup_script_is_not_a_backup() {
+  # a decoy whose command line has only the script's name, as `less invenio-sql-backup.bash` would
+  new_case $FUNCNAME; rm "$CASE_DIR/bin/pgrep"
+  bash -c 'sleep 4; :' x invenio-sql-backup.bash & local decoy=$!
+  sleep 0.5; STUB_ACTIVE="" run_script "$SAFE"; kill $decoy 2>/dev/null; wait $decoy 2>/dev/null
+  expect_rc 0 "only an editor-like decoy names the script"; [ -z "$OUT" ] || fail "expected no output, got: $OUT"
+}
+
+t_safe_a_running_backup_script_is_found() {
+  new_case $FUNCNAME; rm "$CASE_DIR/bin/pgrep"
+  printf '#!/bin/bash\nsleep 4\n' > "$CASE_DIR/invenio-sql-backup.bash"
+  bash "$CASE_DIR/invenio-sql-backup.bash" & local job=$!
+  sleep 0.5; STUB_ACTIVE="" run_script "$SAFE"; kill $job 2>/dev/null; wait $job 2>/dev/null
+  expect_rc 1 "invenio-sql-backup.bash is running"; expect_out "backup"
+}
+
+t_safe_a_running_pg_dump_process_is_found() {
+  new_case $FUNCNAME; rm "$CASE_DIR/bin/pgrep"
+  ln -s "$(command -v sleep)" "$CASE_DIR/pg_dump"  # a link: copying a signed macOS binary gets it killed
+  "$CASE_DIR/pg_dump" 4 & local job=$!
+  sleep 0.5; STUB_ACTIVE="" run_script "$SAFE"; kill $job 2>/dev/null; wait $job 2>/dev/null
+  expect_rc 1 "a pg_dump process is running"; expect_out "backup"
 }
 
 t_safe_has_no_side_effects() {
