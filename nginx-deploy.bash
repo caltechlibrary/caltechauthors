@@ -40,6 +40,7 @@ SYNOPSIS
   nginx-deploy.bash diff     [OPTIONS]
   nginx-deploy.bash apply    [OPTIONS] [--migrate-legacy] [--reload] [--yes]
   nginx-deploy.bash rollback [--etc-dir DIR] [--backup-dir DIR] [--reload] [STAMP]
+  nginx-deploy.bash verify   [--repo-dir DIR] [--etc-dir DIR] [--site-name NAME]
   nginx-deploy.bash --help | --version
 
 DESCRIPTION
@@ -55,11 +56,14 @@ UPGRADING A HOST
   After ANY git pull in the checkout, before restarting nginx or the RDM services:
 
     git pull
-    nginx-deploy.bash check --server-name NAME --tls letsencrypt|self-signed
+    sudo ./nginx-deploy.bash verify
     sudo systemctl restart nginx    (and the RDM services)
 
   A pull that moves or removes a file makes a link dangle, and nginx would not start at its
-  next restart (the 2026-11-05 outage). check reports that; `apply` repairs it.
+  next restart (the 2026-11-05 outage). verify reports that without needing a server name or
+  --tls; `apply` repairs it. apply also sets git's core.hooksPath to .githooks in the checkout,
+  so a post-merge hook runs verify after each pull and warns if it fails. The hook only warns:
+  git ignores a hook's exit status, and it does not run on `git reset --hard`.
 
 VERBS
   check     fail (exit 65) on a dangling link or one that no longer points into this checkout;
@@ -75,6 +79,10 @@ VERBS
             --reload. Asks first unless --yes is given.
   rollback  put a backup back (the latest, or the named STAMP), run `nginx -t`, and reload
             only with --reload
+  verify    read-only check of a host that has been deployed; needs no --server-name or --tls, so
+            the post-merge hook and verify_rdm_boot.bash can call it. Fails (65) if a link or host
+            file is missing, dangling or not pointing into this checkout, if nginx -t rejects the
+            INSTALLED tree (the one a restart loads), or if the logging is not in effect
 
 OPTIONS
   --server-name NAME     the host's name, for server_name ("_" is a catch-all). Required for
@@ -211,11 +219,11 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ ${#POS[@]} -gt 0 ] || usage_error "no verb given (the verbs are: check, diff, apply, rollback)"
+[ ${#POS[@]} -gt 0 ] || usage_error "no verb given (the verbs are: check, diff, apply, rollback, verify)"
 VERB=${POS[0]}
 case "$VERB" in
-  check|diff|apply|rollback) ;;
-  *) usage_error "unknown verb: $VERB (the verbs are: check, diff, apply, rollback)" ;;
+  check|diff|apply|rollback|verify) ;;
+  *) usage_error "unknown verb: $VERB (the verbs are: check, diff, apply, rollback, verify)" ;;
 esac
 STAMP_ARG=""
 if [ "$VERB" = rollback ]; then
@@ -225,7 +233,7 @@ else
   [ ${#POS[@]} -le 1 ] || usage_error "surplus argument: ${POS[1]}"
 fi
 case "$VERB" in
-  check|diff) [ "$RELOAD" -eq 0 ] || usage_error "--reload only applies to apply and rollback" ;;
+  check|diff|verify) [ "$RELOAD" -eq 0 ] || usage_error "--reload only applies to apply and rollback" ;;
 esac
 [ "$VERB" = apply ] || [ "$YES" -eq 0 ] || usage_error "--yes only applies to apply"
 case "$VERB" in
@@ -246,15 +254,17 @@ abs_path_ok "$CACHE_DIR" || usage_error "--cache-dir '$CACHE_DIR' must be an abs
 abs_path_ok "$BACKUP_ROOT" || usage_error "--backup-dir '$BACKUP_ROOT' must be an absolute path of letters, digits, . _ - and /"
 
 if [ "$VERB" != rollback ]; then
-  [ -n "$SERVER_NAME" ] || usage_error "--server-name is required"
-  name_ok "$SERVER_NAME" || usage_error "--server-name '$SERVER_NAME' may only contain letters, digits, . _ and -"
-  [ -n "$TLS" ] || usage_error "--tls is required (letsencrypt or self-signed)"
-  case "$TLS" in
-    letsencrypt|self-signed) ;;
-    *) usage_error "--tls '$TLS' is not one of: letsencrypt, self-signed" ;;
-  esac
-  [ -n "$CERT_NAME" ] || CERT_NAME=$SERVER_NAME
-  name_ok "$CERT_NAME" || usage_error "--cert-name '$CERT_NAME' may only contain letters, digits, . _ and -"
+  if [ "$VERB" != verify ]; then
+    [ -n "$SERVER_NAME" ] || usage_error "--server-name is required"
+    name_ok "$SERVER_NAME" || usage_error "--server-name '$SERVER_NAME' may only contain letters, digits, . _ and -"
+    [ -n "$TLS" ] || usage_error "--tls is required (letsencrypt or self-signed)"
+    case "$TLS" in
+      letsencrypt|self-signed) ;;
+      *) usage_error "--tls '$TLS' is not one of: letsencrypt, self-signed" ;;
+    esac
+    [ -n "$CERT_NAME" ] || CERT_NAME=$SERVER_NAME
+    name_ok "$CERT_NAME" || usage_error "--cert-name '$CERT_NAME' may only contain letters, digits, . _ and -"
+  fi
   name_ok "$SITE_NAME" || usage_error "--site-name '$SITE_NAME' may only contain letters, digits, . _ and -"
   if [ -z "$REPO_DIR" ]; then REPO_DIR=$(cd "$(dirname "$0")" && pwd); fi
   abs_path_ok "$REPO_DIR" || usage_error "--repo-dir '$REPO_DIR' must be an absolute path of letters, digits, . _ - and /"
@@ -298,13 +308,15 @@ if [ "$VERB" != rollback ]; then
   [ -d "$SRC" ] || die $EX_NOINPUT "the repository's nginx tree is missing: $SRC"
   [ -d "$SRC/conf.d" ] || die $EX_NOINPUT "missing: $SRC/conf.d"
   [ -f "$SRC/sites-available/caltechauthors.conf" ] || die $EX_NOINPUT "missing: $SRC/sites-available/caltechauthors.conf"
-  [ -f "$SRC/tls/$TLS.conf" ] || die $EX_NOINPUT "missing: $SRC/tls/$TLS.conf"
+  [ "$VERB" = verify ] || [ -f "$SRC/tls/$TLS.conf" ] || die $EX_NOINPUT "missing: $SRC/tls/$TLS.conf"
   [ -f "$SRC/snippets/ssl-params.conf" ] || die $EX_NOINPUT "missing: $SRC/snippets/ssl-params.conf"
   [ -f "$SRC/redirect-map.conf" ] || die $EX_NOINPUT "missing: $SRC/redirect-map.conf (linked as snippets/caltechauthors-redirect-map.conf)"
 fi
 
-if [ "$VERB" = check ] || [ "$VERB" = apply ]; then
+if [ "$VERB" = check ] || [ "$VERB" = apply ] || [ "$VERB" = verify ]; then
   [ -f "$ETC_DIR/nginx.conf" ] || die $EX_NOINPUT "missing: $ETC_DIR/nginx.conf"
+fi
+if [ "$VERB" = check ] || [ "$VERB" = apply ]; then
   # Written by cloud-init, not by this script; it is required, not created. (snippets/ssl-params.conf
   # was too, until a host kept a stale copy of it: it is managed now, see render_all.)
   [ -f "$ETC_DIR/dhparam.pem" ] || die $EX_NOINPUT "missing: $ETC_DIR/dhparam.pem (cloud-init writes it)"
@@ -363,10 +375,8 @@ check_repo_tokens() {
   done
 }
 
-# render_all lists the links (conf.d, the site file, ssl-params, the redirect map) and renders the two
-# files that differ per host into $RENDER, in the layout of the etc directory.
-render_all() {
-  mkdir -p "$RENDER/snippets" || die $EX_IOERR "could not make $RENDER"
+# list_links lists the links (conf.d, the site file, ssl-params, the redirect map) that apply makes.
+list_links() {
   local f
   for f in "$SRC"/conf.d/*.conf; do
     [ -f "$f" ] || continue
@@ -376,6 +386,13 @@ render_all() {
   add_link "snippets/ssl-params.conf" "$SRC/snippets/ssl-params.conf"
   add_link "snippets/caltechauthors-redirect-map.conf" "$SRC/redirect-map.conf"
   check_repo_tokens
+}
+
+# render_all lists the links and renders the two files that differ per host into $RENDER, in the layout of
+# the etc directory.
+render_all() {
+  mkdir -p "$RENDER/snippets" || die $EX_IOERR "could not make $RENDER"
+  list_links
   {
     echo "# Written by nginx-deploy.bash (caltechauthors DR-0011). Not a link: this is one of the two files that differ per host."
     echo "# Run nginx-deploy.bash apply to change it; do not edit it by hand."
@@ -391,12 +408,20 @@ render_all() {
 
 # verify_links is the check's answer to a pull that moved or removed a file (2026-11-05): every link of
 # ours that is already installed must resolve and point into this checkout. It lists all of them, then
-# fails (65). A regular file where a link belongs is not an error here (apply replaces it).
+# fails (65). check calls it as it is: a link that is not installed yet, or a regular file where a link
+# belongs, is not an error there (apply makes or replaces it). verify calls it "strict": a host that is
+# supposed to be deployed must have every link, and the host files and the sites-enabled link too.
 verify_links() {
-  local i rel tgt dest cur msg=""
+  local i rel tgt dest cur msg="" strict=${1:-}
   for i in "${!LNK_REL[@]}"; do
     rel=${LNK_REL[$i]}; tgt=${LNK_TGT[$i]}; dest=$ETC_DIR/$rel
-    [ -L "$dest" ] || continue
+    if [ ! -L "$dest" ]; then
+      if [ "$strict" = strict ]; then
+        if [ -e "$dest" ]; then msg="$msg  not a link: $rel (a regular file where the link belongs; apply replaces it)"$'\n'
+        else msg="$msg  missing: $rel (apply makes it)"$'\n'; fi
+      fi
+      continue
+    fi
     cur=$(readlink "$dest")
     if [ ! -e "$dest" ]; then
       msg="$msg  dangling: $rel -> $cur (nothing is there; this checkout wants $tgt)"$'\n'
@@ -407,7 +432,44 @@ verify_links() {
       esac
     fi
   done
-  [ -z "$msg" ] || { printf '%s' "$msg" >&2; die $EX_DATA "a link under $ETC_DIR is dangling or does not point into this checkout; nothing was changed (apply repairs it)"; }
+  if [ "$strict" = strict ]; then
+    for rel in snippets/caltechauthors-host.conf snippets/caltechauthors-tls.conf; do
+      [ -f "$ETC_DIR/$rel" ] || msg="$msg  missing: $rel (apply writes it)"$'\n'
+    done
+    dest=$ETC_DIR/sites-enabled/$SITE_NAME.conf
+    if [ ! -L "$dest" ]; then msg="$msg  missing: sites-enabled/$SITE_NAME.conf (apply makes it)"$'\n'
+    elif [ ! -e "$dest" ]; then msg="$msg  dangling: sites-enabled/$SITE_NAME.conf -> $(readlink "$dest")"$'\n'; fi
+  fi
+  [ -z "$msg" ] || { printf '%s' "$msg" >&2; die $EX_DATA "$ETC_DIR is not a good deployment of this checkout: a link is missing, dangling or does not point into the checkout; nothing was changed (apply repairs it)"; }
+}
+
+# ---- the post-merge hook (git does not copy hooks, so the checkout is pointed at .githooks) ------
+
+# hooks_path prints the checkout's core.hooksPath, or nothing; it prints "n/a" when the checkout is not a git
+# repository with a .githooks directory, which is nothing this script manages. (safe.directory: the script
+# runs as root over a checkout owned by another user.)
+hooks_path() {
+  { [ -d "$REPO_DIR/.git" ] || [ -f "$REPO_DIR/.git" ]; } && [ -d "$REPO_DIR/.githooks" ] || { echo "n/a"; return; }
+  command -v git >/dev/null 2>&1 || { echo "n/a"; return; }
+  git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" config --get core.hooksPath 2>/dev/null
+  return 0
+}
+
+# set_hooks_path makes core.hooksPath .githooks if it is unset, and says so if it is set to something else.
+# Written as root it would leave .git/config owned by root, so the owner of .git is restored.
+set_hooks_path() {
+  local cur; cur=$(hooks_path)
+  case "$cur" in
+    "n/a"|.githooks) return 0 ;;
+    "") ;;
+    *) echo "note: core.hooksPath in $REPO_DIR is '$cur', not .githooks, so the post-merge nginx check is not enabled"; return 0 ;;
+  esac
+  if git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" config core.hooksPath .githooks 2>/dev/null; then
+    [ "$(id -u)" != 0 ] || [ ! -d "$REPO_DIR/.git" ] || chown --reference="$REPO_DIR/.git" "$REPO_DIR/.git/config" 2>/dev/null || true
+    echo "hooks: core.hooksPath is now .githooks in $REPO_DIR (the post-merge hook runs nginx-deploy.bash verify after a pull)"
+  else
+    echo "note: could not set core.hooksPath in $REPO_DIR; run: git -C $REPO_DIR config core.hooksPath .githooks"
+  fi
 }
 
 # ---- the legacy configuration (a host configured by hand before this script) ---
@@ -534,8 +596,9 @@ build_stage() {
 # log_format exists, and every server block of this site (the ones that include the host file) sets an
 # access_log in that format, or redirect traffic writes combined-format lines into the extended log.
 check_logging() {
+  local what=${1:-staged}
   grep -Eq '^[[:space:]]*log_format[[:space:]]+caltechauthors_bots([[:space:]]|$)' "$DUMP" \
-    || die $EX_DATA "the staged configuration defines no log_format caltechauthors_bots (conf.d/caltechauthors_log.conf); nothing was changed on this host"
+    || die $EX_DATA "the $what configuration defines no log_format caltechauthors_bots (conf.d/caltechauthors_log.conf); nothing was changed on this host"
   local bad rc
   bad=$(awk '
     { line=$0; sub(/^[ \t]*#.*/,"",line); sub(/[ \t]#.*$/,"",line) }
@@ -550,7 +613,7 @@ check_logging() {
   rc=$?
   [ "$rc" -eq 0 ] || { cat "$WORK/awk.err" >&2; die $EX_INTERNAL "could not read the nginx -T dump for the access_log check (awk exited $rc)"; }
   bad=$(printf '%s' "$bad" | tr '\n' ' ')
-  [ -z "$bad" ] || die $EX_DATA "a server block of this site sets no access_log with the caltechauthors_bots format (dump line $bad): both server blocks, ports 80 and 443, must; nothing was changed on this host"
+  [ -z "$bad" ] || die $EX_DATA "a server block of this site sets no access_log with the caltechauthors_bots format (dump line $bad of the $what configuration): both server blocks, ports 80 and 443, must; nothing was changed on this host"
   echo "logging: log_format caltechauthors_bots and an access_log in every server block of the site: ok"
 }
 
@@ -689,6 +752,29 @@ verb_check() {
   echo "check: the staged configuration for $SERVER_NAME passed; nothing was changed on this host"
 }
 
+# verify is the read-only check of a host that has been deployed. It needs no server name and no --tls, so
+# the post-pull hook and verify_rdm_boot.bash can call it: every link and host file is in place and points into
+# this checkout, nginx accepts the INSTALLED tree (the one a restart will load), and the logging changes are in it.
+verb_verify() {
+  list_links
+  verify_links strict
+  if ! "$NGINX_BIN" -t -c "$ETC_DIR/nginx.conf" > "$WORK/installed-t.out" 2>&1; then
+    cat "$WORK/installed-t.out" >&2
+    die $EX_DATA "nginx -t rejects the installed tree under $ETC_DIR; a restart of nginx would fail"
+  fi
+  echo "nginx -t on the installed tree: ok"
+  if ! "$NGINX_BIN" -T -c "$ETC_DIR/nginx.conf" > "$DUMP" 2> "$WORK/nginx-T.err"; then
+    cat "$WORK/nginx-T.err" >&2
+    die $EX_DATA "nginx -T could not dump the installed configuration"
+  fi
+  check_logging installed
+  echo "verify: $ETC_DIR is a good deployment of $REPO_DIR; nothing was changed on this host"
+  case "$(hooks_path)" in
+    "n/a"|.githooks) ;;
+    *) echo "note: git core.hooksPath in $REPO_DIR is not .githooks, so no nginx check runs after a pull; run: git -C $REPO_DIR config core.hooksPath .githooks" >&2 ;;
+  esac
+}
+
 verb_diff() {
   render_all
   plan_changes
@@ -719,6 +805,7 @@ verb_apply() {
   plan_changes
   if [ ${#CHG_REL[@]} -eq 0 ]; then
     echo "apply: no change; the installed files already match the repository's"
+    set_hooks_path
     return
   fi
   echo "apply: ${#CHG_REL[@]} item(s) to install for $SERVER_NAME:"
@@ -799,6 +886,7 @@ verb_apply() {
   echo "nginx -t on the installed tree: ok"
   [ "$RELOAD" -ne 1 ] || reload_nginx
   echo "apply: installed ${#CHG_REL[@]} item(s); backup $(basename "$bk") in $BACKUP_ROOT; undo with: $PROG rollback $(basename "$bk")"
+  set_hooks_path
 }
 
 verb_rollback() {
@@ -828,5 +916,6 @@ case "$VERB" in
   diff) verb_diff ;;
   apply) verb_apply ;;
   rollback) verb_rollback ;;
+  verify) verb_verify ;;
 esac
 exit $EX_OK

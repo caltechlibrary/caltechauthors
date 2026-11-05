@@ -32,17 +32,25 @@ pull, and before restarting anything**:
 
 ```shell
 git pull
-sudo ./nginx-deploy.bash check --server-name authors.library.caltech.edu --tls letsencrypt
+sudo ./nginx-deploy.bash verify
 sudo systemctl restart nginx          # then the RDM services, as usual
 ```
 
-`check` exits 65 and names the link if the pull moved or removed a file that a link points at. That is the
+`verify` needs no server name and no `--tls`. It is read-only: every link and host file must be in place and
+point into this checkout, `nginx -t` must accept the **installed** tree (the one a restart loads), and the log
+format and both servers' `access_log` must be in effect. It exits 65 and names what is wrong. That is the
 2026-11-05 outage: a pull moved `redirect-map.conf`, nothing noticed, and nine days later an upgrade restarted
-nginx, which would not start. If `check` fails because of a link, run `apply` (it repairs links and is safe to
-run again), then `check` again.
+nginx, which would not start. If `verify` fails because of a link, run `apply` (it repairs links and is safe to
+run again), then `verify` again. `check` is the other direction: it tests what `apply` *would* install, and
+needs `--server-name` and `--tls`.
 
-A `post-merge` hook can run the check for you after a pull. It only warns: git ignores a hook's exit
-status, and hooks are not copied by `git clone`.
+`apply` also sets `core.hooksPath` to `.githooks` in the checkout, because git does not copy hooks. After that a
+`post-merge` hook (and `post-rewrite`, for `git pull --rebase`) runs `verify` after each pull on a deployed host
+and prints a banner if it fails or could not run. It only warns: git ignores a hook's exit status, and it does
+not run on `git reset --hard` or `git checkout`, so the step above is still the guard. The hook needs passwordless
+`sudo`; without it the banner says the check was not run, and gives the command. A clone that was never
+deployed (a developer's laptop) prints nothing. The hook uses `verify`'s default site name; a host deployed with
+`--site-name` needs to run `verify --site-name NAME` by hand.
 
 ## The verbs
 
@@ -60,6 +68,7 @@ sudo ./nginx-deploy.bash rollback --reload
   it, tests that copy with `nginx -t -c`, confirms that the `caltechauthors_bots` log format exists and that
   both server blocks set an `access_log` in it, and runs `logagent check` when `logagent` is installed. It
   changes nothing on the host.
+- **verify** is the read-only check of a host that is already deployed (see *Upgrading a host*).
 - **diff** compares what is installed with what `apply` would install. Exit 1 means drift: a missing or wrong
   link, a regular file where a link belongs, or a host file that differs. A changed file behind a correct link is
   not drift; that is a pull.

@@ -247,7 +247,8 @@ t_an_unknown_verb_is_a_usage_error() { new_case $FUNCNAME; run -- frobnicate; eq
 t_the_four_verbs_are_known() {
   new_case $FUNCNAME
   for v in diff apply rollback; do run -- $v --frobnicate; has "$ERR" "--frobnicate" "$v reaches option parsing, so it is a verb"; done
-  run -- frobnicate; has "$ERR" "check, diff, apply, rollback" "the error lists the verbs"
+  run -- verify --frobnicate; has "$ERR" "--frobnicate" "verify reaches option parsing, so it is a verb"
+  run -- frobnicate; has "$ERR" "check, diff, apply, rollback, verify" "the error lists the verbs"
 }
 t_a_missing_server_name_is_a_usage_error() {
   new_case $FUNCNAME; run -- check --repo-dir "$CASE_DIR/repo" --etc-dir "$CASE_DIR/etc" --tls self-signed
@@ -1005,7 +1006,139 @@ t_a_missing_log_format_fails_check() {
 t_help_describes_the_links_and_the_upgrade_procedure() {
   new_case $FUNCNAME; run -- --help; eq "$RC" 0 "exit"
   has "$OUT" "symbolic link" "the links"; has "$OUT" "git pull" "the procedure starts with the pull"
-  has "$OUT" "nginx-deploy.bash check" "and continues with the check"
+  has "$OUT" "sudo ./nginx-deploy.bash verify" "and continues with verify, which needs no host arguments"
+  has "$OUT" "core.hooksPath" "and says where the hook comes from"
+}
+
+# ---- DR-0011: verify, the read-only check of an installed host ----------------------
+
+# vfy prints the options verify takes: no server name, no --tls (the hook and verify_rdm_boot.bash know neither).
+vfy() { echo "verify --repo-dir $CASE_DIR/repo --etc-dir $CASE_DIR/etc"; }
+
+t_verify_passes_on_an_applied_host_without_a_server_name_or_tls() {
+  new_case $FUNCNAME; apply_ok; run -- $(vfy); eq "$RC" 0 "exit (stderr: $ERR)"
+  has "$OUT" "nginx -t on the installed tree: ok" "the installed tree was tested"; has "$OUT" "verify: " "says what it did"
+}
+t_verify_tests_the_installed_tree_and_changes_nothing() {
+  new_case $FUNCNAME; apply_ok; local before; before=$(tree_sig "$CASE_DIR/etc"); : > "$CASE_DIR/stub.log"
+  run -- $(vfy); eq "$RC" 0 "exit (stderr: $ERR)"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the tree"; eq "$(n_backups)" 1 "no backup directory was made"
+  has "$(cat "$CASE_DIR/stub.log")" "nginx -t -c $CASE_DIR/etc/nginx.conf" "nginx tested the live file, not a stage"
+}
+t_verify_fails_on_a_dangling_link() {
+  new_case $FUNCNAME; apply_ok; ln -sfn "$CASE_DIR/repo/redirect-map.conf" "$CASE_DIR/etc/snippets/caltechauthors-redirect-map.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "dangling: snippets/caltechauthors-redirect-map.conf -> $CASE_DIR/repo/redirect-map.conf" "names the link"
+}
+t_verify_fails_on_a_missing_link() {
+  new_case $FUNCNAME; apply_ok; rm "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: conf.d/caltechauthors_limits.conf" "names the link"
+}
+t_verify_fails_on_a_regular_file_where_a_link_belongs() {
+  new_case $FUNCNAME; apply_ok; hand_copy conf.d/caltechauthors_limits.conf "# hand edit"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "not a link: conf.d/caltechauthors_limits.conf" "names the file"
+}
+t_verify_fails_on_a_host_that_was_never_deployed() {
+  new_case $FUNCNAME; run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: sites-enabled/caltechauthors.conf" "says what is missing"
+}
+t_verify_fails_when_a_host_file_is_missing() {
+  new_case $FUNCNAME; apply_ok; rm "$CASE_DIR/etc/snippets/caltechauthors-host.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: snippets/caltechauthors-host.conf" "names the file"
+}
+t_verify_fails_when_nginx_rejects_the_installed_tree() {
+  new_case $FUNCNAME; apply_ok
+  run STUB_NGINX_INSTALLED_RC=1 STUB_NGINX_T_MSG="nginx: [emerg] open() failed in the live tree" -- $(vfy); eq "$RC" 65 "exit"
+  has "$ERR" "open() failed in the live tree" "nginx's own message is shown"
+}
+t_verify_checks_the_logging() {
+  new_case $FUNCNAME; apply_ok
+  awk '/access_log .*caltechauthors_bots/ && !d {d=1; next} {print}' "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf" > "$CASE_DIR/site.tmp" \
+    && cat "$CASE_DIR/site.tmp" > "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf"
+  run -- $(vfy); eq "$RC" 65 "exit (stderr: $ERR)"; has "$ERR" "access_log" "names the directive"
+}
+t_verify_needs_root_for_the_default_etc_dir() {
+  new_case $FUNCNAME
+  if [ "$(id -u)" = 0 ]; then echo "      (skipped: running as root)"; return; fi
+  run -- verify --repo-dir "$CASE_DIR/repo"; eq "$RC" 77 "exit"
+}
+t_verify_takes_no_other_arguments_or_flags() {
+  new_case $FUNCNAME; apply_ok
+  run -- $(vfy) surplus; eq "$RC" 2 "a surplus argument"
+  run -- $(vfy) --reload; eq "$RC" 2 "--reload"; run -- $(vfy) --yes; eq "$RC" 2 "--yes"
+}
+t_verify_is_in_the_help() {
+  new_case $FUNCNAME; run -- --help; has "$OUT" "nginx-deploy.bash verify" "the synopsis"; has "$OUT" "hook" "the help says who calls it"
+}
+
+# ---- DR-0011: the post-merge hook and core.hooksPath ---------------------------------
+
+# hook_case builds a fixture for the hook: a git checkout, a fake /etc/nginx with or without the host file, and a
+# stub nginx-deploy.bash that records its arguments and exits $STUB_VERIFY_RC after printing $STUB_VERIFY_OUT.
+hook_case() { # hook_case NAME [deployed]
+  new_case "$1"; mkdir -p "$CASE_DIR/clone"; git init -q "$CASE_DIR/clone"
+  [ "${2:-}" != deployed ] || echo "server_name x;" > "$CASE_DIR/etc/snippets/caltechauthors-host.conf"
+  cat > "$CASE_DIR/stub-deploy.bash" <<'EOS'
+#!/bin/bash
+echo "stub-deploy $*" >> "$STUB_LOG"
+[ -z "${STUB_VERIFY_OUT:-}" ] || echo "$STUB_VERIFY_OUT"
+exit "${STUB_VERIFY_RC:-0}"
+EOS
+}
+# run_hook HOOK [VAR=value ...] runs a hook from the repository's .githooks inside the fixture clone; sets OUT, ERR, RC.
+run_hook() {
+  local hook=$1; shift
+  OUT=$(cd "$CASE_DIR/clone" && env STUB_LOG="$CASE_DIR/stub.log" NGINX_DEPLOY="$CASE_DIR/stub-deploy.bash" NGINX_DEPLOY_ETC="$CASE_DIR/etc" \
+    NGINX_DEPLOY_SUDO=env "$@" "$HERE/.githooks/$hook" 2> "$CASE_DIR/err")
+  RC=$?; ERR=$(cat "$CASE_DIR/err")
+}
+
+t_the_hooks_exist_and_are_executable() {
+  new_case $FUNCNAME
+  for h in post-merge post-rewrite; do [ -x "$HERE/.githooks/$h" ] || fail ".githooks/$h is missing or not executable"; done
+}
+t_the_hook_is_silent_on_a_clone_that_was_never_deployed() {
+  hook_case $FUNCNAME; run_hook post-merge
+  eq "$RC" 0 "exit"; eq "$OUT$ERR" "" "a developer's pull prints nothing"; eq "$(grep -c '^stub-deploy' "$CASE_DIR/stub.log")" 0 "verify was not run"
+}
+t_the_hook_runs_verify_on_a_deployed_host_and_says_ok() {
+  hook_case $FUNCNAME deployed; run_hook post-merge
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "nginx" "it says something"; has "$(cat "$CASE_DIR/stub.log")" "stub-deploy verify --repo-dir $(cd "$CASE_DIR/clone" && pwd -P) --etc-dir $CASE_DIR/etc" "verify ran on the checkout (git reports the real path)"
+  hasnt "$OUT$ERR" "FAILED" "no alarm"
+}
+t_the_hook_warns_loudly_when_verify_fails_and_never_fails_the_pull() {
+  hook_case $FUNCNAME deployed; run_hook post-merge STUB_VERIFY_RC=65 STUB_VERIFY_OUT="  dangling: snippets/x.conf -> /nowhere"
+  eq "$RC" 0 "the hook never fails the pull (git ignores it anyway)"
+  has "$OUT$ERR" "NGINX CHECK FAILED" "the banner"; has "$OUT$ERR" "dangling: snippets/x.conf" "verify's own message is shown"
+  has "$OUT$ERR" "do not restart nginx" "what to do"
+}
+t_the_hook_says_so_when_it_could_not_run_verify() {
+  hook_case $FUNCNAME deployed; run_hook post-merge STUB_VERIFY_RC=1 STUB_VERIFY_OUT="sudo: a password is required"
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "COULD NOT BE RUN" "says it did not check"; has "$OUT$ERR" "sudo ./nginx-deploy.bash verify" "gives the command to run by hand"
+  hasnt "$OUT$ERR" "NGINX CHECK FAILED" "it does not claim the config is bad"
+}
+t_post_rewrite_runs_the_same_check() {
+  hook_case $FUNCNAME deployed; run_hook post-rewrite STUB_VERIFY_RC=65 STUB_VERIFY_OUT="  dangling: a -> b"
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "NGINX CHECK FAILED" "the banner"
+}
+t_apply_points_the_checkout_at_the_repository_hooks() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"
+  apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath)" ".githooks" "core.hooksPath"
+}
+t_apply_leaves_a_different_hooks_path_alone_and_says_so() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"; git -C "$CASE_DIR/repo" config core.hooksPath other-hooks
+  apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath)" "other-hooks" "left alone"; has "$OUT" "other-hooks" "says what it found"
+}
+t_apply_without_a_git_checkout_or_hooks_directory_changes_no_git_config() {
+  new_case $FUNCNAME; apply_ok; absent "$CASE_DIR/repo/.git" "no git directory was created"
+  git init -q "$CASE_DIR/repo"; apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath || true)" "" "a checkout with no .githooks directory is left alone"
+}
+t_verify_notes_when_the_hook_is_not_enabled() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"; apply_ok
+  git -C "$CASE_DIR/repo" config --unset core.hooksPath
+  run -- $(vfy); eq "$RC" 0 "a missing hook is a note, not a failure (stderr: $ERR)"
+  has "$ERR" "core.hooksPath" "the note names the setting"; has "$ERR" ".githooks" "and the value"
 }
 
 # ---- the runner -------------------------------------------------------------
