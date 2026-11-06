@@ -61,6 +61,8 @@ if [ ! -f "$conf" ]; then echo "nginx: [emerg] open() \"$conf\" failed (2: No su
 cdir=$(dirname "$conf")
 # the real nginx creates proxy_cache_path directories, last component only, even under -t
 dir=$(cat "$cdir"/conf.d/*.conf 2>/dev/null | grep -E '^[[:space:]]*proxy_cache_path[[:space:]]' | head -1 | awk '{print $2}')
+# DR-0011: installed files are links into the checkout and keep the live /var/cache/nginx path; a sandbox maps it
+if [ -n "${STUB_CACHE_DIR:-}" ]; then dir=${dir/\/var\/cache\/nginx\//$STUB_CACHE_DIR/}; fi
 # a log_format name defined twice is an emergency, as in the real nginx (the legacy top-level
 # caltechauthors_log.conf plus conf.d/caltechauthors_log.conf is exactly that)
 nfmt=$(cat "$cdir"/conf.d/*.conf "$cdir"/caltechauthors_log.conf 2>/dev/null | grep -c '^log_format caltechauthors_bots')
@@ -163,7 +165,7 @@ run() {
   [ "${1:-}" = "--" ] && shift
   # the script's temporary directory is inside the case, so a kept stage is removed with it
   mkdir -p "$CASE_DIR/tmp"
-  OUT=$(env STUB_LOG="$CASE_DIR/stub.log" NGINX="$CASE_DIR/bin/nginx" LOGAGENT="$CASE_DIR/bin/logagent" SYSTEMCTL="$CASE_DIR/bin/systemctl" STUB_ETC="$CASE_DIR/etc" TMPDIR="$CASE_DIR/tmp" \
+  OUT=$(env STUB_LOG="$CASE_DIR/stub.log" NGINX="$CASE_DIR/bin/nginx" LOGAGENT="$CASE_DIR/bin/logagent" SYSTEMCTL="$CASE_DIR/bin/systemctl" STUB_ETC="$CASE_DIR/etc" STUB_CACHE_DIR="$CASE_DIR/cache" TMPDIR="$CASE_DIR/tmp" \
     DPKG_QUERY="$CASE_DIR/bin/dpkg-query" APT_GET="$CASE_DIR/bin/apt-get" DPKG_DEB="$CASE_DIR/bin/dpkg-deb" STUB_PKG="$CASE_DIR/pkg" \
     ${envs[@]+"${envs[@]}"} "$SCRIPT" "$@" 2> "$CASE_DIR/err" <<<"${RUN_STDIN:-}")
   RC=$?
@@ -182,6 +184,12 @@ stdv() {
 }
 # stdr prints the options rollback takes.
 stdr() { echo "rollback --etc-dir $CASE_DIR/etc --backup-dir $CASE_DIR/backups"; }
+# hand_copy REL LINE replaces the installed link REL with a regular file: the repository's content plus LINE,
+# the way a host's hand-made copy differs (editing through the link would edit the repository instead).
+hand_copy() {
+  local f="$CASE_DIR/etc/$1"
+  { cat "$f"; echo "$2"; } > "$f.tmp" && rm -f "$f" && mv "$f.tmp" "$f"
+}
 # mode_of FILE prints the permission string, e.g. -rw-r--r--
 mode_of() { ls -ld "$1" | awk '{print $1}'; }
 # n_backups prints how many backup directories exist.
@@ -239,7 +247,8 @@ t_an_unknown_verb_is_a_usage_error() { new_case $FUNCNAME; run -- frobnicate; eq
 t_the_four_verbs_are_known() {
   new_case $FUNCNAME
   for v in diff apply rollback; do run -- $v --frobnicate; has "$ERR" "--frobnicate" "$v reaches option parsing, so it is a verb"; done
-  run -- frobnicate; has "$ERR" "check, diff, apply, rollback" "the error lists the verbs"
+  run -- verify --frobnicate; has "$ERR" "--frobnicate" "verify reaches option parsing, so it is a verb"
+  run -- frobnicate; has "$ERR" "check, diff, apply, rollback, verify" "the error lists the verbs"
 }
 t_a_missing_server_name_is_a_usage_error() {
   new_case $FUNCNAME; run -- check --repo-dir "$CASE_DIR/repo" --etc-dir "$CASE_DIR/etc" --tls self-signed
@@ -307,12 +316,17 @@ t_self_signed_needs_its_snippet_but_letsencrypt_does_not() {
   run -- check --repo-dir "$CASE_DIR/repo" --etc-dir "$CASE_DIR/etc" --server-name a.example --tls letsencrypt --no-logagent
   eq "$RC" 0 "letsencrypt does not need it (stderr: $ERR)"
 }
-t_tokens_are_replaced_in_the_staged_site_file() {
+t_the_stage_gets_the_host_files_and_the_site_file_includes_them() {
+  # DR-0011: the site file is linked, so it carries no host value; the script writes them into generated files
   new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit"
   local s; s=$(staged_dir); exists "$s/sites-available/caltechauthors.conf" "site file"
   local site; site=$(cat "$s/sites-available/caltechauthors.conf")
-  has "$site" "server_name host.example.org;" "server name"; has "$site" "include $CASE_DIR/repo/nginx/redirect-map.conf;" "repo dir in the redirect map include"
-  has "$site" "alias $CASE_DIR/repo/.venv/var/instance/static;" "repo dir in the static alias"
+  hasnt "$site" "server_name host.example.org" "the site file names no host"
+  eq "$(grep -c 'include snippets/caltechauthors-host.conf;' "$s/sites-available/caltechauthors.conf")" 2 "both server blocks include the host file"
+  has "$site" "include snippets/caltechauthors-redirect-map.conf;" "the redirect map comes through /etc/nginx"
+  has "$site" "alias \$caltechauthors_static;" "the static path is a variable the host file sets"
+  has "$(grep -v '^#' "$s/snippets/caltechauthors-host.conf")" "server_name host.example.org;" "the host file names the server"
+  has "$(grep -v '^#' "$s/snippets/caltechauthors-host.conf")" "set \$caltechauthors_static $CASE_DIR/repo/.venv/var/instance/static;" "and sets the static path"
   case "$site" in *@[A-Z_]*@*) fail "an @TOKEN@ is left";; esac
 }
 t_the_cert_name_defaults_to_the_server_name() {
@@ -337,7 +351,13 @@ t_the_repository_conf_d_files_are_overlaid() {
   local s; s=$(staged_dir)
   for f in caltechauthors_limits caltechauthors_cache caltechauthors_log cloudflare_real_ip; do exists "$s/conf.d/$f.conf" "conf.d/$f.conf"; done
 }
-t_a_token_left_unreplaced_is_wrong_data() {
+t_a_token_left_in_a_generated_file_is_wrong_data() {
+  new_case $FUNCNAME; echo "  # oops @NOPE@" >> "$CASE_DIR/repo/nginx/tls/self-signed.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit"; has "$ERR" "@NOPE@" "names the token"; has "$ERR" "self-signed.conf" "names the file"
+  hasnt "$(cat "$CASE_DIR/stub.log")" "nginx -t" "nginx was never asked"
+}
+t_a_token_in_a_linked_repository_file_is_wrong_data() {
+  # DR-0011: a linked file cannot be rendered, so a token in it would reach nginx as it is
   new_case $FUNCNAME; echo "  # oops @NOPE@" >> "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf"
   run -- $(std) --no-logagent; eq "$RC" 65 "exit"; has "$ERR" "@NOPE@" "names the token"; has "$ERR" "caltechauthors.conf" "names the file"
   hasnt "$(cat "$CASE_DIR/stub.log")" "nginx -t" "nginx was never asked"
@@ -450,7 +470,8 @@ t_diff_on_a_fresh_host_reports_everything_missing() {
   new_case $FUNCNAME; local before; before=$(tree_sig "$CASE_DIR/etc")
   run -- $(stdv diff); eq "$RC" 1 "drift is exit 1"
   for f in conf.d/caltechauthors_limits.conf conf.d/caltechauthors_cache.conf conf.d/caltechauthors_log.conf conf.d/cloudflare_real_ip.conf \
-           sites-available/caltechauthors.conf snippets/caltechauthors-tls.conf sites-enabled/caltechauthors.conf; do
+           sites-available/caltechauthors.conf snippets/caltechauthors-tls.conf snippets/caltechauthors-host.conf \
+           snippets/caltechauthors-redirect-map.conf sites-enabled/caltechauthors.conf; do
     has "$OUT" "missing  $f" "$f is reported missing"
   done
   eq "$(tree_sig "$CASE_DIR/etc")" "$before" "diff changed the tree"
@@ -458,9 +479,12 @@ t_diff_on_a_fresh_host_reports_everything_missing() {
 t_diff_after_apply_reports_no_drift() {
   new_case $FUNCNAME; apply_ok; run -- $(stdv diff); eq "$RC" 0 "exit (out: $OUT)"; has "$OUT" "no drift" "says so"
 }
-t_diff_shows_a_hand_edit_as_a_diff() {
-  new_case $FUNCNAME; apply_ok; echo "# a hand edit" >> "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
-  run -- $(stdv diff); eq "$RC" 1 "exit"; has "$OUT" "differs  conf.d/caltechauthors_limits.conf" "names the file"; has "$OUT" "-# a hand edit" "the diff shows the host's extra line"
+t_diff_shows_a_hand_made_copy_as_a_diff() {
+  # DR-0011: a link cannot be hand-edited without editing the repository; what drifts is a regular file where a link belongs
+  new_case $FUNCNAME; apply_ok
+  rm "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"; { cat "$CASE_DIR/repo/nginx/conf.d/caltechauthors_limits.conf"; echo "# a hand edit"; } > "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  run -- $(stdv diff); eq "$RC" 1 "exit"; has "$OUT" "differs  conf.d/caltechauthors_limits.conf" "names the file"
+  has "$OUT" "a regular file where the link belongs" "says what is wrong"; has "$OUT" "-# a hand edit" "the diff shows the host's extra line"
 }
 t_diff_notices_a_missing_or_a_wrong_link() {
   new_case $FUNCNAME; apply_ok
@@ -487,21 +511,18 @@ t_diff_compares_real_paths_not_the_stage() {
 t_apply_installs_the_rendered_files() {
   new_case $FUNCNAME; apply_ok; local e=$CASE_DIR/etc
   for f in conf.d/caltechauthors_limits.conf conf.d/caltechauthors_cache.conf conf.d/caltechauthors_log.conf conf.d/cloudflare_real_ip.conf; do exists "$e/$f" "$f"; done
-  has "$(cat "$e/sites-available/caltechauthors.conf")" "server_name host.example.org;" "the site file is rendered"
+  has "$(cat "$e/snippets/caltechauthors-host.conf")" "server_name host.example.org;" "the host file is generated"
   has "$(cat "$e/snippets/caltechauthors-tls.conf")" "include snippets/self-signed.conf;" "the tls snippet"
   eq "$(readlink "$e/sites-enabled/caltechauthors.conf")" "$e/sites-available/caltechauthors.conf" "the sites-enabled link"
 }
-t_apply_installs_the_rendered_repository_files_not_the_stage_copies() {
+t_apply_installs_the_repository_files_not_the_stage_copies() {
   new_case $FUNCNAME; apply_ok
   eq "$(grep -rl "$CASE_DIR/tmp" "$CASE_DIR/etc" 2>/dev/null | wc -l | tr -d ' ')" 0 "an installed file mentions the stage path"
-  has "$(cat "$CASE_DIR/etc/conf.d/caltechauthors_cache.conf")" "$CASE_DIR/cache/caltechauthors_iiif" "the real cache path"
+  cmp -s "$CASE_DIR/etc/conf.d/caltechauthors_cache.conf" "$CASE_DIR/repo/nginx/conf.d/caltechauthors_cache.conf" || fail "the installed file (through its link) is not the repository's, byte for byte"
 }
-t_apply_installs_files_with_mode_0644() {
+t_apply_installs_generated_files_with_mode_0644() {
   new_case $FUNCNAME; apply_ok
-  eq "$(mode_of "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "-rw-r--r--" "conf.d file"
-  eq "$(mode_of "$CASE_DIR/etc/sites-available/caltechauthors.conf")" "-rw-r--r--" "site file"
-  eq "$(mode_of "$CASE_DIR/etc/snippets/caltechauthors-tls.conf")" "-rw-r--r--" "tls snippet"
-  eq "$(mode_of "$CASE_DIR/etc/snippets/ssl-params.conf")" "-rw-r--r--" "ssl-params snippet"
+  for f in caltechauthors-host caltechauthors-tls; do eq "$(mode_of "$CASE_DIR/etc/snippets/$f.conf")" "-rw-r--r--" "snippets/$f.conf"; done
 }
 t_apply_leaves_the_packaged_nginx_conf_and_every_other_file_alone() {
   new_case $FUNCNAME; echo "# another site's file" > "$CASE_DIR/etc/conf.d/other.conf"; ln -s /nowhere "$CASE_DIR/etc/sites-enabled/default"
@@ -557,7 +578,7 @@ t_a_copy_that_fails_part_way_is_restored() {
 }
 t_a_half_written_file_from_a_failed_install_is_removed() {
   new_case $FUNCNAME; local before; before=$(tree_sig "$CASE_DIR/etc")
-  run PATH="$CASE_DIR/bin:$PATH" STUB_INSTALL_FAIL_ON=sites-available/caltechauthors.conf.nginx-deploy.new -- $(stdv apply) --yes --no-logagent
+  run PATH="$CASE_DIR/bin:$PATH" STUB_INSTALL_FAIL_ON=snippets/caltechauthors-host.conf.nginx-deploy.new -- $(stdv apply) --yes --no-logagent
   eq "$RC" 74 "exit (stderr: $ERR)"
   eq "$(find "$CASE_DIR/etc" -name '*.nginx-deploy.new' | wc -l | tr -d ' ')" 0 "no half-written .new file is left behind"
   eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the tree is as it was"
@@ -565,7 +586,7 @@ t_a_half_written_file_from_a_failed_install_is_removed() {
 t_two_backups_in_the_same_second_do_not_overwrite_each_other() {
   new_case $FUNCNAME
   run PATH="$CASE_DIR/bin:$PATH" STUB_DATE=20260101-000000 -- $(stdv apply) --yes --no-logagent; eq "$RC" 0 "first apply (stderr: $ERR)"
-  echo "# edited by hand" >> "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  hand_copy conf.d/caltechauthors_limits.conf "# edited by hand"
   run PATH="$CASE_DIR/bin:$PATH" STUB_DATE=20260101-000000 -- $(stdv apply) --yes --no-logagent; eq "$RC" 0 "second apply (stderr: $ERR)"
   eq "$(n_backups)" 2 "two backup directories"
   exists "$CASE_DIR/backups/20260101-000000/MANIFEST" "the first"; exists "$CASE_DIR/backups/20260101-000000-2/MANIFEST" "the second"
@@ -580,7 +601,7 @@ t_the_backup_has_a_stamp_name_and_a_manifest() {
   has "$m" "link-created sites-enabled/caltechauthors.conf" "the created link"
 }
 t_the_backup_holds_only_what_was_replaced() {
-  new_case $FUNCNAME; apply_ok; echo "# edited by hand" >> "$CASE_DIR/etc/conf.d/caltechauthors_log.conf"
+  new_case $FUNCNAME; apply_ok; hand_copy conf.d/caltechauthors_log.conf "# edited by hand"
   apply_ok; local b; b=$(latest_backup)
   eq "$(find "$b/files" -type f | wc -l | tr -d ' ')" 1 "one file backed up"
   has "$(cat "$b/files/conf.d/caltechauthors_log.conf")" "# edited by hand" "it holds the host's version"
@@ -613,11 +634,11 @@ t_reload_needs_systemctl_before_anything_changes() {
   run SYSTEMCTL=/nonexistent/systemctl -- $(stdv apply) --yes --no-logagent --reload; eq "$RC" 66 "exit"
   eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the tree"
 }
-t_a_new_server_name_replaces_the_site_file_and_backs_up_the_old_one() {
+t_a_new_server_name_replaces_the_host_file_and_backs_up_the_old_one() {
   new_case $FUNCNAME; apply_ok
   run -- $(stdv apply) --yes --no-logagent --server-name other.example.org; eq "$RC" 0 "exit (stderr: $ERR)"
-  has "$(cat "$CASE_DIR/etc/sites-available/caltechauthors.conf")" "server_name other.example.org;" "the new name"
-  has "$(cat "$(latest_backup)/files/sites-available/caltechauthors.conf")" "server_name host.example.org;" "the backup holds the old one"
+  has "$(cat "$CASE_DIR/etc/snippets/caltechauthors-host.conf")" "server_name other.example.org;" "the new name"
+  has "$(cat "$(latest_backup)/files/snippets/caltechauthors-host.conf")" "server_name host.example.org;" "the backup holds the old host file"
 }
 t_apply_needs_root_for_the_default_etc_dir() {
   new_case $FUNCNAME
@@ -645,7 +666,7 @@ t_rollback_with_no_backups_is_no_input() {
 }
 t_rollback_takes_the_latest_or_the_named_stamp() {
   new_case $FUNCNAME; apply_ok; local first; first=$(basename "$(latest_backup)")
-  echo "# hand edit" >> "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"; apply_ok
+  hand_copy conf.d/caltechauthors_limits.conf "# hand edit"; apply_ok
   run -- $(stdr); eq "$RC" 0 "rollback of the latest"; has "$(cat "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "# hand edit" "the latest backup returns the hand-edited file"
   run -- $(stdr) "$first"; eq "$RC" 0 "rollback of the named first backup"; absent "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf" "the first backup returns the host to before anything was installed"
 }
@@ -846,6 +867,7 @@ t_only_the_iiif_location_rewrites_cache_control() {
 
 # make_stale_ssl_params gives the fixture the snippet as cloud-init wrote it before 2026-09-10.
 make_stale_ssl_params() {
+  rm -f "$CASE_DIR/etc/snippets/ssl-params.conf"   # a link after apply: writing through it would edit the repository
   printf 'ssl_protocols TLSv1.2 TLSv1.3;\nadd_header X-Frame-Options DENY;\nadd_header X-Content-Type-Options nosniff;\n' \
     > "$CASE_DIR/etc/snippets/ssl-params.conf"
 }
@@ -870,6 +892,253 @@ t_the_ssl_params_snippet_sends_no_headers() {
   new_case $FUNCNAME
   eq "$(grep -v '^[[:space:]]*#' "$HERE/nginx/snippets/ssl-params.conf" | grep -c 'add_header')" 0 "add_header outside a comment"
   has "$(cat "$HERE/nginx/snippets/ssl-params.conf")" "ssl_dhparam /etc/nginx/dhparam.pem;" "it names the DH parameters the script requires"
+}
+
+# ---- DR-0011: the repository's files are linked, not copied ----------------------
+
+t_apply_links_the_repository_files_into_etc() {
+  new_case $FUNCNAME; apply_ok; local e=$CASE_DIR/etc r=$CASE_DIR/repo/nginx f
+  for f in caltechauthors_limits caltechauthors_cache caltechauthors_log cloudflare_real_ip; do
+    eq "$(readlink "$e/conf.d/$f.conf")" "$r/conf.d/$f.conf" "conf.d/$f.conf links into the checkout"
+  done
+  eq "$(readlink "$e/sites-available/caltechauthors.conf")" "$r/sites-available/caltechauthors.conf" "the site file"
+  eq "$(readlink "$e/snippets/ssl-params.conf")" "$r/snippets/ssl-params.conf" "ssl-params"
+  eq "$(readlink "$e/snippets/caltechauthors-redirect-map.conf")" "$r/redirect-map.conf" "the redirect map"
+  eq "$(readlink "$e/sites-enabled/caltechauthors.conf")" "$e/sites-available/caltechauthors.conf" "sites-enabled links to sites-available"
+}
+t_the_generated_host_files_are_regular_files() {
+  new_case $FUNCNAME; apply_ok; local e=$CASE_DIR/etc f
+  for f in caltechauthors-host caltechauthors-tls; do
+    { [ -f "$e/snippets/$f.conf" ] && [ ! -L "$e/snippets/$f.conf" ]; } || fail "snippets/$f.conf is not a regular file (a pull must never change it)"
+  done
+  eq "$(grep -v '^#' "$e/snippets/caltechauthors-host.conf" | grep .)" "server_name host.example.org;
+set \$caltechauthors_static $CASE_DIR/repo/.venv/var/instance/static;" "the host file holds the server name and the static path, nothing else"
+}
+t_the_repository_files_carry_no_host_tokens() {
+  new_case $FUNCNAME; local bad site
+  bad=$(cd "$HERE/nginx" && grep -rn '@[A-Z][A-Z_]*@' . | grep -v '^\./tls/' | head -3)
+  eq "$bad" "" "a token outside nginx/tls/ (linked files cannot be rendered)"
+  site=$(grep -v '^[[:space:]]*#' "$HERE/nginx/sites-available/caltechauthors.conf")
+  eq "$(printf '%s\n' "$site" | grep -c '/Sites/')" 0 "no checkout path in the site file"
+  has "$site" "include snippets/caltechauthors-redirect-map.conf;" "the map is included through /etc/nginx"
+  has "$site" 'alias $caltechauthors_static;' "the static alias is a variable"
+}
+t_a_change_in_the_checkout_is_live_through_the_links() {
+  new_case $FUNCNAME; apply_ok
+  echo "# a repository edit" >> "$CASE_DIR/repo/nginx/conf.d/caltechauthors_limits.conf"
+  has "$(cat "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "# a repository edit" "the host sees the edit through the link"
+  run -- $(stdv diff); eq "$RC" 0 "a changed file behind a correct link is not drift (out: $OUT)"
+}
+t_check_fails_on_a_dangling_link() {
+  # the 2026-11-05 outage: a pull moved the redirect map and the include pointed at nothing
+  new_case $FUNCNAME; apply_ok; local before; before=$(tree_sig "$CASE_DIR/etc")
+  ln -sfn "$CASE_DIR/repo/redirect-map.conf" "$CASE_DIR/etc/snippets/caltechauthors-redirect-map.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit"
+  has "$ERR" "dangling: snippets/caltechauthors-redirect-map.conf -> $CASE_DIR/repo/redirect-map.conf" "names the dangling link and where it points"
+  eq "$(tree_sig "$CASE_DIR/etc" | grep -v 'caltechauthors-redirect-map')" "$(printf '%s\n' "$before" | grep -v 'caltechauthors-redirect-map')" "check changed nothing else"
+}
+t_check_names_every_broken_link() {
+  new_case $FUNCNAME; apply_ok
+  ln -sfn "$CASE_DIR/repo/redirect-map.conf" "$CASE_DIR/etc/snippets/caltechauthors-redirect-map.conf"
+  ln -sfn "$CASE_DIR/repo/nginx/conf.d/gone.conf" "$CASE_DIR/etc/conf.d/caltechauthors_cache.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit"
+  has "$ERR" "dangling: snippets/caltechauthors-redirect-map.conf" "the first link"; has "$ERR" "dangling: conf.d/caltechauthors_cache.conf" "the second link"
+}
+t_check_fails_when_a_link_points_outside_the_checkout() {
+  new_case $FUNCNAME; apply_ok; echo "# not ours" > "$CASE_DIR/other.conf"
+  ln -sfn "$CASE_DIR/other.conf" "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit"; has "$ERR" "conf.d/caltechauthors_limits.conf" "names the link"; has "$ERR" "outside the checkout" "says why"
+}
+t_apply_repairs_a_moved_checkout() {
+  new_case $FUNCNAME; apply_ok; mv "$CASE_DIR/repo" "$CASE_DIR/repo2"
+  local a="--repo-dir $CASE_DIR/repo2 --etc-dir $CASE_DIR/etc --server-name host.example.org --tls self-signed --logagent-config $CASE_DIR/logagent.yaml --cache-dir $CASE_DIR/cache --backup-dir $CASE_DIR/backups"
+  run -- check $a --no-logagent; eq "$RC" 65 "the links still point at the old path (stderr: $ERR)"
+  run -- apply $a --yes --no-logagent; eq "$RC" 0 "apply repairs them (stderr: $ERR)"
+  eq "$(readlink "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "$CASE_DIR/repo2/nginx/conf.d/caltechauthors_limits.conf" "the link follows the checkout"
+  has "$(grep -v '^#' "$CASE_DIR/etc/snippets/caltechauthors-host.conf")" "$CASE_DIR/repo2/.venv" "the generated static path follows it too"
+  run -- check $a --no-logagent; eq "$RC" 0 "check is clean afterwards (stderr: $ERR)"
+}
+t_apply_replaces_a_hand_made_copy_with_a_link_and_rollback_puts_it_back() {
+  # production today: regular files in /etc/nginx made by hand
+  new_case $FUNCNAME; printf '# the hand-made copy\nlimit_req_zone x;\n' > "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  local mine; mine=$(cat "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")
+  apply_ok
+  [ -L "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf" ] || fail "the hand-made copy was not replaced by a link"
+  has "$(cat "$(latest_backup)/MANIFEST")" "replaced conf.d/caltechauthors_limits.conf" "the manifest says replaced"
+  eq "$(cat "$(latest_backup)/files/conf.d/caltechauthors_limits.conf")" "$mine" "the backup holds the hand-made copy"
+  run -- $(stdr); eq "$RC" 0 "rollback (stderr: $ERR)"
+  { [ -f "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf" ] && [ ! -L "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf" ]; } || fail "rollback did not put a regular file back"
+  eq "$(cat "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf")" "$mine" "the hand-made copy, byte for byte"
+}
+t_rollback_removes_the_links_a_first_apply_made() {
+  new_case $FUNCNAME; local before; before=$(tree_sig "$CASE_DIR/etc")
+  apply_ok; run -- $(stdr); eq "$RC" 0 "rollback (stderr: $ERR)"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the tree is as it was"
+}
+t_the_stage_holds_copies_not_links_into_the_checkout() {
+  # DR-0011 open point 1: the staged nginx -t must never be able to touch the checkout
+  new_case $FUNCNAME; run -- $(std) --no-logagent --keep-stage; eq "$RC" 0 "exit"
+  local s f; s=$(staged_dir)
+  for f in conf.d/caltechauthors_limits.conf sites-available/caltechauthors.conf snippets/caltechauthors-redirect-map.conf snippets/ssl-params.conf; do
+    { [ -f "$s/$f" ] && [ ! -L "$s/$f" ]; } || fail "$f in the stage is not a regular file"
+  done
+}
+t_a_missing_redirect_map_in_the_repository_is_no_input() {
+  new_case $FUNCNAME; rm "$CASE_DIR/repo/nginx/redirect-map.conf"; run -- $(std) --no-logagent
+  eq "$RC" 66 "exit"; has "$ERR" "$CASE_DIR/repo/nginx/redirect-map.conf" "names the file"
+}
+t_a_server_block_without_the_access_log_fails_check() {
+  new_case $FUNCNAME
+  awk '/access_log .*caltechauthors_bots/ && !d {d=1; next} {print}' "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf" > "$CASE_DIR/site.tmp" \
+    && mv "$CASE_DIR/site.tmp" "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit (stderr: $ERR)"; has "$ERR" "access_log" "names the directive"; has "$ERR" "caltechauthors_bots" "names the format"
+}
+t_an_awk_failure_in_the_logging_check_is_internal() {
+  # a check that cannot read the dump must not pass: an awk error is exit 70, never a quiet 0
+  new_case $FUNCNAME
+  printf '#!/bin/bash\ncase "$*" in *insrv*) echo "awk: stub failure" >&2; exit 2;; esac\nexec "$(PATH=/usr/bin:/bin command -v awk)" "$@"\n' > "$CASE_DIR/bin/awk"; chmod +x "$CASE_DIR/bin/awk"
+  run PATH="$CASE_DIR/bin:$PATH" -- $(std) --no-logagent; eq "$RC" 70 "exit (stderr: $ERR)"; has "$ERR" "awk" "names awk"
+}
+t_a_missing_log_format_fails_check() {
+  new_case $FUNCNAME; rm "$CASE_DIR/repo/nginx/conf.d/caltechauthors_log.conf"
+  run -- $(std) --no-logagent; eq "$RC" 65 "exit (stderr: $ERR)"; has "$ERR" "log_format" "names the directive"
+}
+t_help_describes_the_links_and_the_upgrade_procedure() {
+  new_case $FUNCNAME; run -- --help; eq "$RC" 0 "exit"
+  has "$OUT" "symbolic link" "the links"; has "$OUT" "git pull" "the procedure starts with the pull"
+  has "$OUT" "sudo ./nginx-deploy.bash verify" "and continues with verify, which needs no host arguments"
+  has "$OUT" "core.hooksPath" "and says where the hook comes from"
+}
+
+# ---- DR-0011: verify, the read-only check of an installed host ----------------------
+
+# vfy prints the options verify takes: no server name, no --tls (the hook and verify_rdm_boot.bash know neither).
+vfy() { echo "verify --repo-dir $CASE_DIR/repo --etc-dir $CASE_DIR/etc"; }
+
+t_verify_passes_on_an_applied_host_without_a_server_name_or_tls() {
+  new_case $FUNCNAME; apply_ok; run -- $(vfy); eq "$RC" 0 "exit (stderr: $ERR)"
+  has "$OUT" "nginx -t on the installed tree: ok" "the installed tree was tested"; has "$OUT" "verify: " "says what it did"
+}
+t_verify_tests_the_installed_tree_and_changes_nothing() {
+  new_case $FUNCNAME; apply_ok; local before; before=$(tree_sig "$CASE_DIR/etc"); : > "$CASE_DIR/stub.log"
+  run -- $(vfy); eq "$RC" 0 "exit (stderr: $ERR)"
+  eq "$(tree_sig "$CASE_DIR/etc")" "$before" "the tree"; eq "$(n_backups)" 1 "no backup directory was made"
+  has "$(cat "$CASE_DIR/stub.log")" "nginx -t -c $CASE_DIR/etc/nginx.conf" "nginx tested the live file, not a stage"
+}
+t_verify_fails_on_a_dangling_link() {
+  new_case $FUNCNAME; apply_ok; ln -sfn "$CASE_DIR/repo/redirect-map.conf" "$CASE_DIR/etc/snippets/caltechauthors-redirect-map.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "dangling: snippets/caltechauthors-redirect-map.conf -> $CASE_DIR/repo/redirect-map.conf" "names the link"
+}
+t_verify_fails_on_a_missing_link() {
+  new_case $FUNCNAME; apply_ok; rm "$CASE_DIR/etc/conf.d/caltechauthors_limits.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: conf.d/caltechauthors_limits.conf" "names the link"
+}
+t_verify_fails_on_a_regular_file_where_a_link_belongs() {
+  new_case $FUNCNAME; apply_ok; hand_copy conf.d/caltechauthors_limits.conf "# hand edit"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "not a link: conf.d/caltechauthors_limits.conf" "names the file"
+}
+t_verify_fails_on_a_host_that_was_never_deployed() {
+  new_case $FUNCNAME; run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: sites-enabled/caltechauthors.conf" "says what is missing"
+}
+t_verify_fails_when_a_host_file_is_missing() {
+  new_case $FUNCNAME; apply_ok; rm "$CASE_DIR/etc/snippets/caltechauthors-host.conf"
+  run -- $(vfy); eq "$RC" 65 "exit"; has "$ERR" "missing: snippets/caltechauthors-host.conf" "names the file"
+}
+t_verify_fails_when_nginx_rejects_the_installed_tree() {
+  new_case $FUNCNAME; apply_ok
+  run STUB_NGINX_INSTALLED_RC=1 STUB_NGINX_T_MSG="nginx: [emerg] open() failed in the live tree" -- $(vfy); eq "$RC" 65 "exit"
+  has "$ERR" "open() failed in the live tree" "nginx's own message is shown"
+}
+t_verify_checks_the_logging() {
+  new_case $FUNCNAME; apply_ok
+  awk '/access_log .*caltechauthors_bots/ && !d {d=1; next} {print}' "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf" > "$CASE_DIR/site.tmp" \
+    && cat "$CASE_DIR/site.tmp" > "$CASE_DIR/repo/nginx/sites-available/caltechauthors.conf"
+  run -- $(vfy); eq "$RC" 65 "exit (stderr: $ERR)"; has "$ERR" "access_log" "names the directive"
+}
+t_verify_needs_root_for_the_default_etc_dir() {
+  new_case $FUNCNAME
+  if [ "$(id -u)" = 0 ]; then echo "      (skipped: running as root)"; return; fi
+  run -- verify --repo-dir "$CASE_DIR/repo"; eq "$RC" 77 "exit"
+}
+t_verify_takes_no_other_arguments_or_flags() {
+  new_case $FUNCNAME; apply_ok
+  run -- $(vfy) surplus; eq "$RC" 2 "a surplus argument"
+  run -- $(vfy) --reload; eq "$RC" 2 "--reload"; run -- $(vfy) --yes; eq "$RC" 2 "--yes"
+}
+t_verify_is_in_the_help() {
+  new_case $FUNCNAME; run -- --help; has "$OUT" "nginx-deploy.bash verify" "the synopsis"; has "$OUT" "hook" "the help says who calls it"
+}
+
+# ---- DR-0011: the post-merge hook and core.hooksPath ---------------------------------
+
+# hook_case builds a fixture for the hook: a git checkout, a fake /etc/nginx with or without the host file, and a
+# stub nginx-deploy.bash that records its arguments and exits $STUB_VERIFY_RC after printing $STUB_VERIFY_OUT.
+hook_case() { # hook_case NAME [deployed]
+  new_case "$1"; mkdir -p "$CASE_DIR/clone"; git init -q "$CASE_DIR/clone"
+  [ "${2:-}" != deployed ] || echo "server_name x;" > "$CASE_DIR/etc/snippets/caltechauthors-host.conf"
+  cat > "$CASE_DIR/stub-deploy.bash" <<'EOS'
+#!/bin/bash
+echo "stub-deploy $*" >> "$STUB_LOG"
+[ -z "${STUB_VERIFY_OUT:-}" ] || echo "$STUB_VERIFY_OUT"
+exit "${STUB_VERIFY_RC:-0}"
+EOS
+}
+# run_hook HOOK [VAR=value ...] runs a hook from the repository's .githooks inside the fixture clone; sets OUT, ERR, RC.
+run_hook() {
+  local hook=$1; shift
+  OUT=$(cd "$CASE_DIR/clone" && env STUB_LOG="$CASE_DIR/stub.log" NGINX_DEPLOY="$CASE_DIR/stub-deploy.bash" NGINX_DEPLOY_ETC="$CASE_DIR/etc" \
+    NGINX_DEPLOY_SUDO=env "$@" "$HERE/.githooks/$hook" 2> "$CASE_DIR/err")
+  RC=$?; ERR=$(cat "$CASE_DIR/err")
+}
+
+t_the_hooks_exist_and_are_executable() {
+  new_case $FUNCNAME
+  for h in post-merge post-rewrite; do [ -x "$HERE/.githooks/$h" ] || fail ".githooks/$h is missing or not executable"; done
+}
+t_the_hook_is_silent_on_a_clone_that_was_never_deployed() {
+  hook_case $FUNCNAME; run_hook post-merge
+  eq "$RC" 0 "exit"; eq "$OUT$ERR" "" "a developer's pull prints nothing"; eq "$(grep -c '^stub-deploy' "$CASE_DIR/stub.log")" 0 "verify was not run"
+}
+t_the_hook_runs_verify_on_a_deployed_host_and_says_ok() {
+  hook_case $FUNCNAME deployed; run_hook post-merge
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "nginx" "it says something"; has "$(cat "$CASE_DIR/stub.log")" "stub-deploy verify --repo-dir $(cd "$CASE_DIR/clone" && pwd -P) --etc-dir $CASE_DIR/etc" "verify ran on the checkout (git reports the real path)"
+  hasnt "$OUT$ERR" "FAILED" "no alarm"
+}
+t_the_hook_warns_loudly_when_verify_fails_and_never_fails_the_pull() {
+  hook_case $FUNCNAME deployed; run_hook post-merge STUB_VERIFY_RC=65 STUB_VERIFY_OUT="  dangling: snippets/x.conf -> /nowhere"
+  eq "$RC" 0 "the hook never fails the pull (git ignores it anyway)"
+  has "$OUT$ERR" "NGINX CHECK FAILED" "the banner"; has "$OUT$ERR" "dangling: snippets/x.conf" "verify's own message is shown"
+  has "$OUT$ERR" "do not restart nginx" "what to do"
+}
+t_the_hook_says_so_when_it_could_not_run_verify() {
+  hook_case $FUNCNAME deployed; run_hook post-merge STUB_VERIFY_RC=1 STUB_VERIFY_OUT="sudo: a password is required"
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "COULD NOT BE RUN" "says it did not check"; has "$OUT$ERR" "sudo ./nginx-deploy.bash verify" "gives the command to run by hand"
+  hasnt "$OUT$ERR" "NGINX CHECK FAILED" "it does not claim the config is bad"
+}
+t_post_rewrite_runs_the_same_check() {
+  hook_case $FUNCNAME deployed; run_hook post-rewrite STUB_VERIFY_RC=65 STUB_VERIFY_OUT="  dangling: a -> b"
+  eq "$RC" 0 "exit"; has "$OUT$ERR" "NGINX CHECK FAILED" "the banner"
+}
+t_apply_points_the_checkout_at_the_repository_hooks() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"
+  apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath)" ".githooks" "core.hooksPath"
+}
+t_apply_leaves_a_different_hooks_path_alone_and_says_so() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"; git -C "$CASE_DIR/repo" config core.hooksPath other-hooks
+  apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath)" "other-hooks" "left alone"; has "$OUT" "other-hooks" "says what it found"
+}
+t_apply_without_a_git_checkout_or_hooks_directory_changes_no_git_config() {
+  new_case $FUNCNAME; apply_ok; absent "$CASE_DIR/repo/.git" "no git directory was created"
+  git init -q "$CASE_DIR/repo"; apply_ok
+  eq "$(git -C "$CASE_DIR/repo" config --get core.hooksPath || true)" "" "a checkout with no .githooks directory is left alone"
+}
+t_verify_notes_when_the_hook_is_not_enabled() {
+  new_case $FUNCNAME; git init -q "$CASE_DIR/repo"; mkdir -p "$CASE_DIR/repo/.githooks"; apply_ok
+  git -C "$CASE_DIR/repo" config --unset core.hooksPath
+  run -- $(vfy); eq "$RC" 0 "a missing hook is a note, not a failure (stderr: $ERR)"
+  has "$ERR" "core.hooksPath" "the note names the setting"; has "$ERR" ".githooks" "and the value"
 }
 
 # ---- the runner -------------------------------------------------------------
