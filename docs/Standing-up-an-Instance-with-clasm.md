@@ -174,6 +174,25 @@ document count, and the `/api/records` total. Small drift is normal, because the
 source keeps moving. An `/api/records` total below the raw record count is the
 access filter on restricted records working.
 
+Before that reboot, install the reboot checks. Cloud-init puts
+`safe_to_reboot.bash` and `caltechauthors_down.bash` (from this repository's
+`admin/`) in `/usr/local/bin`. `check-for-reboot.bash` comes from the private
+`admin-shell-scripts` repository, so a person installs it with their own
+credentials; cloud-init holds no key for it:
+
+```bash
+git clone git@github.com:caltechlibrary/admin-shell-scripts
+cd admin-shell-scripts
+sudo make install prefix=/usr/local
+```
+
+`make install` builds man pages and needs `pandoc`, which cloud-init installs.
+`verify_rdm_boot.bash` fails until `check-for-reboot.bash` is on the path, so a
+skipped step shows up. After Ubuntu asks for a reboot, `check-for-reboot.bash`
+runs `safe_to_reboot.bash`, which only reports. `caltechauthors_down.bash`
+stops the units in order (nginx, rdm, rdm_rest, rdm_celery); Docker is left to
+systemd at shutdown.
+
 Finally, `sudo reboot`, wait, and run `verify_rdm_boot.bash` again. The instance
 must come back without anyone starting anything by hand.
 

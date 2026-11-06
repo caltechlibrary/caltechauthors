@@ -1,7 +1,7 @@
 # nginx on a CaltechAUTHORS host
 
-The nginx configuration for CaltechAUTHORS lives in this repository's `nginx/` tree and is installed on a
-host by `nginx-deploy.bash`. This page is for whoever has to deploy it, check it, change it, or put it
+The nginx configuration for CaltechAUTHORS lives in this repository's `nginx/` tree. `nginx-deploy.bash` links
+it into `/etc/nginx` on a host (caltechauthors DR-0011), so a `git pull` changes what nginx reads. This page is for whoever has to deploy it, check it, change it, or put it
 back, and assumes you were not there when it was written.
 
 ## What is in the repository
@@ -10,19 +10,47 @@ back, and assumes you were not there when it was written.
 
 | File | Installed as | What it is |
 |---|---|---|
-| `sites-available/caltechauthors.conf` | `/etc/nginx/sites-available/<site-name>.conf`, linked from `sites-enabled/` | The site: ports 80 and 443, the proxy locations, the IIIF cache and `Cache-Control` rule, the legacy redirects. A **template**: the script replaces `@SERVER_NAME@` and `@REPO_DIR@`. |
-| `tls/letsencrypt.conf` or `tls/self-signed.conf` | `snippets/caltechauthors-tls.conf` | The certificate pair, chosen by `--tls`. |
-| `snippets/ssl-params.conf` | `snippets/ssl-params.conf` | The TLS protocols, ciphers and session settings, for every `--tls`. It carries no `add_header`: the application sends the security headers. |
-| `conf.d/caltechauthors_log.conf` | `conf.d/` | The `caltechauthors_bots` log format. |
-| `conf.d/caltechauthors_limits.conf` | `conf.d/` | The concurrency caps for `/api` and `/api/iiif/`. |
-| `conf.d/caltechauthors_cache.conf` | `conf.d/` | The cache zone for anonymous IIIF renders. |
-| `conf.d/cloudflare_real_ip.conf` | `conf.d/` | Trusts the client address from Cloudflare's published ranges only. |
+| `sites-available/caltechauthors.conf` | linked as `/etc/nginx/sites-available/<site-name>.conf`, which `sites-enabled/` links to | The site: ports 80 and 443, the proxy locations, the IIIF cache and `Cache-Control` rule, the legacy redirects. It holds **no host-specific value**. |
+| `redirect-map.conf` | linked as `snippets/caltechauthors-redirect-map.conf` | The legacy EPrints URL map, included by the site file. |
+| *(written by the script)* | `snippets/caltechauthors-host.conf` | Not a link. The host's `server_name` and the path of the static files (`set $caltechauthors_static ...`), the one file that differs per host besides the next. |
+| `tls/letsencrypt.conf` or `tls/self-signed.conf` | `snippets/caltechauthors-tls.conf` | Not a link. The certificate pair, chosen by `--tls`. |
+| `snippets/ssl-params.conf` | linked as `snippets/ssl-params.conf` | The TLS protocols, ciphers and session settings, for every `--tls`. It carries no `add_header`: the application sends the security headers. |
+| `conf.d/caltechauthors_log.conf` | linked into `conf.d/` | The `caltechauthors_bots` log format. |
+| `conf.d/caltechauthors_limits.conf` | linked into `conf.d/` | The concurrency caps for `/api` and `/api/iiif/`. |
+| `conf.d/caltechauthors_cache.conf` | linked into `conf.d/` | The cache zone for anonymous IIIF renders. |
+| `conf.d/cloudflare_real_ip.conf` | linked into `conf.d/` | Trusts the client address from Cloudflare's published ranges only. |
 
-The redirect map for the legacy EPrints URLs is `nginx/redirect-map.conf`. It is not installed under `/etc/nginx`;
-the site file includes it from the checkout by absolute path (`@REPO_DIR@/nginx/redirect-map.conf`).
+The site file is included through `/etc/nginx`, never by a path into the checkout, so a file that moves
+in the repository leaves a **dangling link** that `check` reports, instead of a config that will not load.
+The script never edits the packaged `/etc/nginx/nginx.conf`.
 
-The script installs by **copy**, never by symlink, so editing the checkout is never a live change to a
-host. It never edits the packaged `/etc/nginx/nginx.conf`.
+## Upgrading a host
+
+A `git pull` is a live change to a linked host: nginx reads the checkout's files at its next reload or
+restart, including a restart nobody asked for (an unattended upgrade restarts every service). So **after any
+pull, and before restarting anything**:
+
+```shell
+git pull
+sudo ./nginx-deploy.bash verify
+sudo systemctl restart nginx          # then the RDM services, as usual
+```
+
+`verify` needs no server name and no `--tls`. It is read-only: every link and host file must be in place and
+point into this checkout, `nginx -t` must accept the **installed** tree (the one a restart loads), and the log
+format and both servers' `access_log` must be in effect. It exits 65 and names what is wrong. That is the
+2026-11-05 outage: a pull moved `redirect-map.conf`, nothing noticed, and nine days later an upgrade restarted
+nginx, which would not start. If `verify` fails because of a link, run `apply` (it repairs links and is safe to
+run again), then `verify` again. `check` is the other direction: it tests what `apply` *would* install, and
+needs `--server-name` and `--tls`.
+
+`apply` also sets `core.hooksPath` to `.githooks` in the checkout, because git does not copy hooks. After that a
+`post-merge` hook (and `post-rewrite`, for `git pull --rebase`) runs `verify` after each pull on a deployed host
+and prints a banner if it fails or could not run. It only warns: git ignores a hook's exit status, and it does
+not run on `git reset --hard` or `git checkout`, so the step above is still the guard. The hook needs passwordless
+`sudo`; without it the banner says the check was not run, and gives the command. A clone that was never
+deployed (a developer's laptop) prints nothing. The hook uses `verify`'s default site name; a host deployed with
+`--site-name` needs to run `verify --site-name NAME` by hand.
 
 ## The verbs
 
@@ -35,12 +63,18 @@ sudo ./nginx-deploy.bash apply  --server-name authors.library.caltech.edu --tls 
 sudo ./nginx-deploy.bash rollback --reload
 ```
 
-- **check** renders the files, builds a *staged* copy of the host's `/etc/nginx` with them laid over it, and
-  tests that copy with `nginx -t -c`, and with `logagent check` when `logagent` is installed. It changes nothing
-  on the host.
-- **diff** compares what is installed with what would be rendered. Exit 1 means drift.
-- **apply** runs check, backs up what it will replace, copies, runs `nginx -t` on the installed tree, and
-  **restores the backup if that fails**. It reloads nginx only with `--reload`, and asks first unless `--yes`.
+- **check** first fails (65) on a dangling link or one that does not point into this checkout. It then builds a
+  *staged* copy of the host's `/etc/nginx` with copies of the repository's files and the host files laid over
+  it, tests that copy with `nginx -t -c`, confirms that the `caltechauthors_bots` log format exists and that
+  both server blocks set an `access_log` in it, and runs `logagent check` when `logagent` is installed. It
+  changes nothing on the host.
+- **verify** is the read-only check of a host that is already deployed (see *Upgrading a host*).
+- **diff** compares what is installed with what `apply` would install. Exit 1 means drift: a missing or wrong
+  link, a regular file where a link belongs, or a host file that differs. A changed file behind a correct link is
+  not drift; that is a pull.
+- **apply** runs check, backs up what it will replace, makes the links and writes the host files, runs `nginx -t`
+  on the installed tree, and **restores the backup if that fails**. It replaces a hand-made copy with a link
+  (the copy is in the backup). It reloads nginx only with `--reload`, and asks first unless `--yes`.
 - **rollback** puts back the latest backup (or the one named by its stamp), tests it, and reloads only with
   `--reload`. Backups are in `/var/backups/caltechauthors-nginx`.
 
@@ -52,8 +86,8 @@ calls `apply --yes --reload --tls self-signed --server-name _`, so a fresh insta
 
 The script uses the workspace's exit codes. The ones that matter in practice: **1** drift (`diff`) or a
 declined `apply`; **2** a bad command line; **65** the configuration was rejected (`nginx -t` failed or
-`logagent` found a gap, before any change or after one that was then restored), a token was left
-unreplaced, or the host has legacy configuration and `--migrate-legacy` was not given; **66** something
+`logagent` found a gap, the log format or an `access_log` is missing, a link is dangling or points outside
+the checkout, or a token was left in a file, before any change or after one that was then restored), or the host has legacy configuration and `--migrate-legacy` was not given; **66** something
 the command needs is missing; **69** `--reload` could not reload nginx (the files are installed and
 `nginx -t` passes, nginx keeps serving the old configuration); **74** a copy failed part way (the backup was
 restored); **77** not root. `--help` lists all of them under EXIT STATUS.
@@ -83,7 +117,7 @@ touch the repository's files.
 A host set up before this layout (production, until it is migrated) has an `/etc/nginx/nginx.conf` edited away
 from the nginx-common package's, and/or the old top-level `/etc/nginx/caltechauthors_log.conf`, which would
 define the `caltechauthors_bots` log format a second time. `check` and `apply` refuse such a host with exit 65
-and change nothing. Rerun with `--migrate-legacy`: it backs up both files, puts back the package's own
+and change nothing. Rerun with `--migrate-legacy`: it backs up both files and any hand-made copies of the managed files, puts back the package's own
 `nginx.conf` (taken from the nginx-common `.deb`, and accepted only if its checksum is the one `dpkg` recorded),
 removes the old log file, and installs. `rollback` undoes all of it. Do this in a quiet window, with `--reload`.
 
@@ -123,7 +157,7 @@ upstream. Two details to keep if you change the block:
 ## Refreshing the Cloudflare address list
 
 `conf.d/cloudflare_real_ip.conf` lists Cloudflare's published ranges (`https://www.cloudflare.com/ips-v4` and
-`/ips-v6`). When they change, edit the file in the repository, then `check`, `diff` and `apply --reload`.
+`/ips-v6`). When they change, edit the file in the repository and merge it; on the host, pull, `check`, and reload nginx.
 Where there is no Cloudflare in front, as on a test instance, the list is inert: only connections from those
 ranges are trusted to say who the client is.
 
@@ -133,8 +167,8 @@ The site file is one `server` block, plus the redirect map and the IIIF `Cache-C
 put a host under a different name, get its certificate pair in place (`Adding-a-Certbot-Hostname.md` for a
 Let's Encrypt one), then run `apply` with the new `--server-name` and, if needed, `--cert-name`.
 
-What this layout does **not** do is serve two hostnames from two rendered site files on one host: each file
-includes the same `redirect-map.conf` and defines the same http-level maps, and nginx rejects the second one
+What this layout does **not** do is serve two hostnames from two site files on one host: each file
+includes the same redirect map and defines the same http-level maps, and nginx rejects the second one
 (`"map_hash_max_size" directive is duplicate`; `check` exits 65 and changes nothing). Verified on nginx 1.24.0.
 
 The failure that `Adding-a-Certbot-Hostname.md` describes (a bare redirect stub that certbot appended its
@@ -148,5 +182,5 @@ certbot is never allowed to edit a site file.
   `/var/log/nginx/error.log` carries `limiting connections` lines when a cap trips.
 - `sudo nginx -t` tests the installed tree. nginx creates the cache directory when it tests, and fails if its
   parent is missing, which `apply` creates for you.
-- The reasons for each choice are in the workspace's decision records for this repository (DR-0009 and
-  DR-0010).
+- The reasons for each choice are in the workspace's decision records for this repository (DR-0009, DR-0010
+  and DR-0011, which replaced the copy rule with links).

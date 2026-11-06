@@ -46,8 +46,8 @@
 #     doesn't apply here (plain Python 3.12, no free-threading).
 #   - Python 3.12 (production's real pin, via this repo's own
 #     .python-version), not 3.14 -- no free-threading angle at all here.
-#   - Node 18, matching this repo's package.json (engines.node >=18) and
-#     what uv-gunicorn-dev's own DEV_SETUP.md already documents using.
+#   - Node 24 (current LTS), which satisfies this repo's package.json
+#     (engines.node >=18).
 #   - invenio-app-rdm pinned to production's real
 #     v13.1.2.caltechauthors.2 (via this repo's own pyproject.toml/
 #     uv.lock, not a fresh `uv add` here) -- not RDM v14.
@@ -88,6 +88,7 @@ packages:
   - makepasswd
   - shellcheck
   - jq
+  - pandoc # admin-shell-scripts' `make install` builds man pages with it (task 4.3)
   - unzip # needed to install AWS CLI v2's official installer bundle --
           # found missing 2026-08-18 setting up a clasm-launched
           # restore-test instance (caltechdata-restore-test)
@@ -108,7 +109,7 @@ write_files:
       #!/bin/bash
       # Installs uv, a uv-managed Python 3.12, invenio-cli (via "uv tool
       # install", not pip -- no PEP 668 externally-managed-environment
-      # dance needed), and Node 18 -- everything
+      # dance needed), and Node 24 -- everything
       # setup_caltechauthors.bash needs. Run once at boot via
       # runcmd; idempotent if rerun.
       set -euo pipefail
@@ -127,10 +128,10 @@ write_files:
       echo "Installing invenio-cli as a uv tool (isolated venv, own Python -- independent of any project's Python pin)..."
       sudo -u ubuntu -H bash -c 'export PATH="$HOME/.local/bin:$PATH"; uv tool install "invenio-cli==1.11.0"'
 
-      echo "Installing nvm + Node 18 for the ubuntu user..."
-      # Node >=18 is this repo's own package.json requirement
-      # (engines.node) for RDM v13.1.2 -- not v14's stricter Node
-      # 22/24+ floor, which doesn't apply to this pin.
+      echo "Installing nvm + Node 24 for the ubuntu user..."
+      # Node 24 is the current LTS. This repo's package.json only
+      # requires >=18 (engines.node), so 24 also meets RDM v14's
+      # 22/24+ floor ahead of that upgrade.
       #
       # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
       # carried over as a precaution here too): git-cloning nvm directly
@@ -148,8 +149,8 @@ write_files:
         fi
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-        nvm install 18
-        nvm alias default 18
+        nvm install 24
+        nvm alias default 24
         echo "" >> "$HOME/.bashrc"
         echo "export NVM_DIR=\"\$HOME/.nvm\"" >> "$HOME/.bashrc"
         echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"" >> "$HOME/.bashrc"
@@ -271,6 +272,39 @@ write_files:
       }
 
       # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      nginx_config_is_sound() {
+        # Regression check for 2026-11-05. nginx was "active" and the API answered
+        # for nine days while the configuration on disk could not be loaded again:
+        # a pull had moved redirect-map.conf, the site file's include dangled, and
+        # the first restart (an unattended upgrade) failed. An active unit proves
+        # nothing about the file the NEXT restart reads. nginx-deploy.bash verify
+        # checks every link and host file, runs nginx -t on the installed tree and
+        # confirms the logging changes; it needs no server name or --tls. On a
+        # failure its own report is printed, indented, under the FAIL line.
+        local out
+        out="$(sudo bash "/Sites/${INSTANCE_NAME}/nginx-deploy.bash" verify \
+          --repo-dir "/Sites/${INSTANCE_NAME}" 2>&1)" && return 0
+        sed 's/^/        /' <<< "${out}"
+        return 1
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      reboot_scripts_installed() {
+        # safe_to_reboot.bash and caltechauthors_down.bash come from the checkout's
+        # admin/ directory. sudo's secure_path includes /usr/local/bin, so this sees
+        # what root and check-for-reboot.bash see.
+        sudo bash -c 'command -v safe_to_reboot.bash && command -v caltechauthors_down.bash' >/dev/null 2>&1
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
+      check_for_reboot_installed() {
+        # Installed by a person from the private admin-shell-scripts repository:
+        #   sudo make install prefix=/usr/local
+        # A skipped step shows up here as a FAIL, not as a silent gap.
+        sudo bash -c 'command -v check-for-reboot.bash' >/dev/null 2>&1
+      }
+
+      # shellcheck disable=SC2329  # called indirectly via check()'s "$@"
       api_responds() {
         local code
         code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 https://localhost/api/records)"
@@ -359,6 +393,9 @@ write_files:
       }
 
       check "docker/rdm/rdm_rest/rdm_celery/nginx are all systemctl active" units_active
+      check "nginx's installed configuration is a sound deployment of the checkout" nginx_config_is_sound
+      check "safe_to_reboot.bash and caltechauthors_down.bash are installed" reboot_scripts_installed
+      check "check-for-reboot.bash (admin-shell-scripts) is installed" check_for_reboot_installed
       check "https://localhost/api/records responds 200" api_responds
       check "redirects generated by the REST app keep the /api prefix" api_prefix_preserved
       check "exactly one X-Frame-Options header on a framed response" single_frame_options_header
@@ -393,7 +430,7 @@ write_files:
 
       export NVM_DIR="$HOME/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-      nvm use 18
+      nvm use 24
       export PATH="$HOME/.local/bin:$PATH"
 
       # Real bug found via live testing on granian-rdm-v14 (2026-07-27,
@@ -401,7 +438,7 @@ write_files:
       # devDependencies pin @rspack/core <1.7.0 while @rspack/cli 2.1.5's
       # own peer dependency wants ^2.0.0-0 -- an inconsistency in that
       # package's own package.json, not anything specific to this
-      # project. npm (10.x, strict-by-default peer resolution) refuses to
+      # project. npm (strict-by-default peer resolution) refuses to
       # install at all otherwise. Setting this persists to ~/.npmrc, so
       # it applies automatically to the npm install invenio-cli runs
       # internally during "invenio-cli install".
@@ -419,6 +456,11 @@ write_files:
         echo "ERROR: branch ${BRANCH} has no nginx-deploy.bash, which this script uses to" >&2
         echo "install the nginx configuration. Use a branch that has it, for example:" >&2
         echo "  $0 rsdoiel" >&2
+        exit 1
+      fi
+      if [ ! -f admin/safe_to_reboot.bash ] || [ ! -f admin/caltechauthors_down.bash ]; then
+        echo "ERROR: branch ${BRANCH} has no admin/safe_to_reboot.bash and admin/caltechauthors_down.bash," >&2
+        echo "the reboot scripts this script installs. Use a branch that has them." >&2
         exit 1
       fi
 
@@ -486,6 +528,16 @@ write_files:
         --site-name "${INSTANCE_NAME}" --server-name _ --tls self-signed \
         --repo-dir "/Sites/${INSTANCE_NAME}"
 
+      # The RDM-specific reboot scripts live in this repository (admin/). They are
+      # copied, not linked: they are not on the boot path, so a stale copy only
+      # makes the advice stale, while a dangling link would break a reboot check.
+      # check-for-reboot.bash, which calls safe_to_reboot.bash, comes from the
+      # private admin-shell-scripts repository and is installed by a person (see
+      # the notes at the end); verify_rdm_boot.bash fails until it is.
+      echo "Installing the reboot scripts into /usr/local/bin"
+      sudo install -m 0755 "/Sites/${INSTANCE_NAME}/admin/safe_to_reboot.bash" /usr/local/bin/safe_to_reboot.bash
+      sudo install -m 0755 "/Sites/${INSTANCE_NAME}/admin/caltechauthors_down.bash" /usr/local/bin/caltechauthors_down.bash
+
       echo "Writing .env"
       # invenio.cfg has NO Redis/RabbitMQ/OpenSearch settings at all (only
       # SQLALCHEMY_DATABASE_URI happens to default to localhost) -- those
@@ -501,6 +553,7 @@ write_files:
       # 2=celery-result/3=ratelimit/4=communities-identities-cache) matches
       # cookiecutter-invenio-rdm's own conventional default split; RabbitMQ
       # has no custom auth in docker-services.yml, so guest/guest applies.
+      # .env.example documents every variable; keep the two in step.
       INVENIO_SECRET_KEY="$(makepasswd -char 64)"
       cat <<EOT >.env
       INVENIO_SECRET_KEY=${INVENIO_SECRET_KEY}
@@ -584,6 +637,11 @@ write_files:
              invenio-cli services status
              sudo systemctl status rdm.target
              /usr/local/bin/verify_rdm_boot.bash   # full acceptance check, esp. after a reboot
+
+         Reboot checks (one step needs a person: admin-shell-scripts is private):
+             git clone git@github.com:caltechlibrary/admin-shell-scripts
+             cd admin-shell-scripts && sudo make install prefix=/usr/local
+             check-for-reboot.bash   # runs safe_to_reboot.bash when a reboot is pending
 
          Stop:
              sudo systemctl stop rdm.target

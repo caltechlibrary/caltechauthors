@@ -36,12 +36,6 @@ We currently deploy CaltechAUTHORS on a m7i.xlarge AWS EC2 instance with Ubuntu
 file](https://github.com/caltechlibrary/cloud-init-examples/blob/main/invenio-rdm-13-init.yaml)
 to do most of the initial setup.
 
-### Install NVM
-
-We haven't gotten NVM to install with cloud-init. Run `curl -o-
-https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash`, then
-reboot and type `nvm install 18`
-
 ### Install InvenioRDM
 ```
 cd caltechauthors
@@ -49,14 +43,13 @@ invenio-cli install
 invenio-cli services setup --no-demo-data
 ```
 
-You'll need a .env file in /Sites, which includes secrets:
+You'll need a .env file in /Sites/caltechauthors, which includes secrets.
+Copy [.env.example](.env.example), which documents each variable, and fill in
+the blanks:
 
 ```
-INVENIO_DATACITE_PASSWORD=
-INVENIO_SECRET_KEY=
-INVENIO_S3_ACCESS_KEY_ID=
-INVENIO_S3_SECRET_ACCESS_KEY=
-INVENIO_MAIL_PASSWORD=
+cp .env.example .env
+chmod 600 .env
 ```
 
 Edit /etc/sysctl.conf and add vm.max_map_count=262144
